@@ -1,0 +1,1726 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>*{box-sizing:border-box}html,body{margin:0;padding:0}body{font:14px system-ui,sans-serif;background:#16202b}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>行列さばき商店街</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&family=Baloo+2:wght@700;800&family=Reggae+One&family=Bungee&family=Permanent+Marker&display=swap">
+<style>
+:root{
+  --ink:#16202b;
+  --ink-2:#22303f;
+  --ink-3:#33475c;
+  --cream:#fff4e3;
+  --cream-dim:#e6d9c6;
+  --sand:#efe1c6;
+  --coral:#f2765c;
+  --coral-dk:#d4543c;
+  --teal:#2fa89b;
+  --amber:#ffc145;
+  --danger:#e8455c;
+  --sky-1:#9fd8e8;
+  --sky-2:#dff0f2;
+  --shadow:0 6px 0 rgba(0,0,0,.28);
+  --font-jp:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Yu Gothic",system-ui,sans-serif;
+  --font-dis:"Baloo 2","M PLUS Rounded 1c",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--cream);font-family:var(--font-jp);-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer;border:0}
+button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+
+#app{position:relative;width:100%;min-height:100dvh;display:flex;flex-direction:column;background:var(--ink)}
+
+/* ---------- stage viewport ---------- */
+#view{position:relative;flex:1 1 auto;min-height:52dvh;overflow:hidden;background:linear-gradient(180deg,var(--sky-1) 0%,var(--sky-2) 62%,#cfe3d6 100%)}
+#gl{position:absolute;inset:0;display:block;width:100%;height:100%;touch-action:none}
+#labels{position:absolute;inset:0;pointer-events:none}
+.tag{position:absolute;transform:translate(-50%,-50%);
+  font-size:11px;font-weight:800;letter-spacing:.04em;white-space:nowrap;
+  padding:3px 8px;border-radius:999px;background:rgba(22,32,43,.78);color:var(--cream);
+  box-shadow:0 2px 0 rgba(0,0,0,.25)}
+.tag.warn{background:rgba(232,69,92,.86)}
+.tag.own{background:rgba(242,118,92,.9)}
+
+/* ---------- top HUD ---------- */
+#hud{position:absolute;top:0;left:0;right:0;display:flex;gap:8px;align-items:stretch;
+  padding:10px;flex-wrap:wrap}
+.chip{background:rgba(22,32,43,.86);border-radius:12px;padding:6px 11px;min-width:66px;
+  box-shadow:var(--shadow);display:flex;flex-direction:column;gap:1px}
+.chip .k{font-size:9.5px;letter-spacing:.1em;color:var(--cream-dim);font-weight:700}
+.chip .v{font-family:var(--font-dis);font-size:21px;line-height:1;font-weight:800;font-variant-numeric:tabular-nums}
+.chip.good .v{color:#7fe0b0}.chip.bad .v{color:#ff9aa8}.chip.warn .v{color:var(--amber)}
+#gauge{flex:1 1 170px;min-width:150px;background:rgba(22,32,43,.86);border-radius:12px;padding:7px 11px;box-shadow:var(--shadow)}
+#gauge .k{font-size:9.5px;letter-spacing:.1em;color:var(--cream-dim);font-weight:700;display:flex;justify-content:space-between}
+#gbar{margin-top:5px;height:9px;border-radius:99px;background:#0d151d;overflow:hidden}
+#gfill{height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,var(--teal),var(--amber) 55%,var(--danger));transition:width .2s}
+.nbrow{display:flex;gap:8px;margin-top:6px}
+.nbm{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:5px}
+.nbm span{font-size:9px;font-weight:700;color:var(--cream-dim);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;max-width:80px}
+.nbm i{flex:1 1 auto;height:6px;border-radius:99px;background:#0d151d;overflow:hidden;display:block}
+.nbm b{display:block;height:100%;width:0%;border-radius:99px;background:var(--teal);transition:width .2s}
+.nbm.hot span{color:#ff9aa8}
+.nbm.hot b{background:var(--danger)}
+.nbm.mid b{background:var(--amber)}
+
+/* ---------- camera pad ---------- */
+#campad{position:absolute;right:10px;bottom:10px;display:grid;grid-template-columns:repeat(2,36px);gap:6px}
+#campad button{width:36px;height:36px;border-radius:11px;background:rgba(22,32,43,.86);color:var(--cream);
+  font-size:15px;font-weight:800;box-shadow:var(--shadow)}
+#campad button:active{transform:translateY(2px);box-shadow:0 4px 0 rgba(0,0,0,.28)}
+
+/* ---------- bottom control deck ---------- */
+#deck{flex:0 0 auto;background:var(--ink-2);border-top:3px solid rgba(0,0,0,.35);
+  padding:12px 14px calc(12px + env(safe-area-inset-bottom));display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+#musicToggle{min-width:86px}
+#musicToggle[aria-pressed="false"]{opacity:.72}
+#deck .grow{flex:1 1 auto;min-width:120px}
+#stagename{font-weight:800;font-size:15px;line-height:1.25}
+#hint{font-size:12px;color:var(--cream-dim);line-height:1.45;margin-top:2px}
+.btn{border-radius:12px;padding:10px 16px;font-weight:800;font-size:14px;color:var(--cream);
+  background:var(--ink-3);box-shadow:0 4px 0 rgba(0,0,0,.35)}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+.btn.primary{background:var(--coral);box-shadow:0 4px 0 var(--coral-dk)}
+.btn.primary:active{box-shadow:0 1px 0 var(--coral-dk)}
+.btn[disabled]{opacity:.45;cursor:not-allowed;transform:none}
+.seg{display:flex;background:var(--ink);border-radius:12px;padding:3px;gap:3px}
+.seg button{border-radius:9px;padding:7px 11px;font-size:13px;font-weight:800;background:transparent;color:var(--cream-dim)}
+.seg button[aria-pressed="true"]{background:var(--teal);color:#06231f}
+#budget{font-family:var(--font-dis);font-weight:800;font-size:26px;font-variant-numeric:tabular-nums}
+#budget.out{color:var(--danger)}
+#budgetwrap{display:flex;align-items:baseline;gap:6px;background:var(--ink);border-radius:12px;padding:7px 13px}
+#budgetwrap .k{font-size:10px;letter-spacing:.08em;color:var(--cream-dim);font-weight:700}
+
+/* ---------- overlays ---------- */
+.sheet{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:18px;
+  background:rgba(10,16,22,.72);backdrop-filter:blur(3px);z-index:20}
+.sheet[hidden]{display:none}
+.card{width:min(560px,100%);max-height:100%;overflow:auto;background:var(--ink-2);border-radius:20px;
+  padding:22px;box-shadow:0 14px 0 rgba(0,0,0,.35)}
+.card h1{font-family:var(--font-dis);font-size:clamp(28px,7vw,42px);margin:0 0 2px;line-height:1;color:var(--coral);text-wrap:balance}
+.card h2{font-size:19px;line-height:1.45;margin:2px 0 12px;text-wrap:balance}
+.card p{font-size:13.5px;line-height:1.7;color:var(--cream-dim);margin:0 0 12px;max-width:62ch}
+.rules{list-style:none;padding:0;margin:0 0 16px;display:grid;gap:8px}
+.rules li{display:grid;grid-template-columns:26px 1fr;gap:10px;align-items:start;font-size:13px;line-height:1.55}
+.rules b{color:var(--cream)}
+.rules .ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:14px;background:var(--ink);}
+.stages{display:grid;gap:9px;margin:14px 0 4px}
+.stagebtn{display:grid;grid-template-columns:38px 1fr auto;gap:12px;align-items:center;text-align:left;
+  background:var(--ink);border-radius:14px;padding:12px 14px;color:var(--cream);box-shadow:0 4px 0 rgba(0,0,0,.35)}
+.stagebtn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+.stagebtn .num{font-family:var(--font-dis);font-size:22px;font-weight:800;color:var(--teal)}
+.stagebtn .t{display:block;font-weight:800;font-size:14.5px}
+.stagebtn .d{display:block;font-size:11.5px;color:var(--cream-dim);margin-top:2px;line-height:1.4}
+.stagebtn .st{font-size:15px;letter-spacing:1px;color:var(--amber)}
+.scorerow{display:flex;gap:10px;flex-wrap:wrap;margin:4px 0 16px}
+.scorerow div{flex:1 1 90px;background:var(--ink);border-radius:12px;padding:9px 12px}
+.scorerow .k{font-size:10px;letter-spacing:.08em;color:var(--cream-dim);font-weight:700}
+.scorerow .v{font-family:var(--font-dis);font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
+.stars{font-size:34px;letter-spacing:6px;color:var(--amber);margin:2px 0 10px;line-height:1}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.hintbox{background:rgba(47,168,155,.14);border-left:4px solid var(--teal);border-radius:0 10px 10px 0;
+  padding:10px 13px;font-size:12.5px;line-height:1.65;color:var(--cream);margin-bottom:14px}
+#toast{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:15;
+  background:var(--danger);color:#fff;font-weight:800;font-size:13px;padding:9px 16px;border-radius:999px;
+  box-shadow:var(--shadow);opacity:0;transition:opacity .25s;pointer-events:none}
+#toast.show{opacity:1}
+/* ============================================================
+   PUNK SCREENS — title & ending
+   ============================================================ */
+:root{
+  --pk-bg:#0b0b0d;
+  --pk-pink:#ff2d6f;
+  --pk-acid:#ccff00;
+  --pk-paper:#f4f1e8;
+}
+.sheet.punk{
+  align-items:flex-start;
+  overflow:auto;
+  padding:26px 22px 40px;
+  background:
+    repeating-linear-gradient(115deg, rgba(255,45,111,.13) 0 12px, rgba(0,0,0,0) 12px 26px),
+    radial-gradient(130% 100% at 50% -10%, #2a0d1e 0%, #0b0b0d 65%, #000 100%);
+  backdrop-filter:none;
+}
+.sheet.punk::after{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:.28;mix-blend-mode:soft-light;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='0.6'/></svg>");
+}
+.card.punk{
+  position:relative;overflow:visible;max-height:none;
+  background:var(--pk-bg);color:var(--pk-paper);
+  border:3px solid var(--pk-paper);border-radius:0;
+  box-shadow:9px 9px 0 var(--pk-pink), -4px -4px 0 var(--pk-acid), 0 22px 50px rgba(0,0,0,.75);
+  transform:rotate(-.7deg);
+  padding:26px 20px 22px;
+  margin-block:auto;            /* centres when it fits, scrolls when it doesn't */
+}
+#sTitle .card.punk{padding:34px 22px 26px}
+#sTitle .ransom{margin-bottom:14px}
+#sTitle .ransom span{font-size:clamp(30px,9.2vw,54px);padding:4px 9px 8px;box-shadow:4px 4px 0 #000}
+#sTitle .punk-sub{font-size:clamp(14px,4.4vw,22px)}
+#sTitle .btn{font-size:17px;padding:14px 26px}
+.card.punk .tape{position:absolute;width:132px;height:28px;opacity:.82;
+  box-shadow:0 3px 10px rgba(0,0,0,.6);pointer-events:none}
+.card.punk .tape.t1{top:-14px;left:-24px;transform:rotate(-23deg);
+  background:repeating-linear-gradient(90deg,var(--pk-acid) 0 9px,rgba(204,255,0,.6) 9px 18px)}
+.card.punk .tape.t2{bottom:-13px;right:-26px;transform:rotate(16deg);
+  background:repeating-linear-gradient(90deg,var(--pk-pink) 0 9px,rgba(255,45,111,.6) 9px 18px)}
+.card.punk .kicker{
+  font-family:"Bungee",var(--font-dis);font-size:10.5px;letter-spacing:.16em;
+  color:var(--pk-acid);margin:0 0 10px;padding-bottom:7px;
+  border-bottom:2px dashed rgba(244,241,232,.3);word-break:break-word}
+.card.punk .kicker em{font-style:normal;color:var(--pk-pink)}
+.ransom{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0 10px}
+.ransom span{
+  font-family:"Reggae One","M PLUS Rounded 1c",sans-serif;
+  font-size:clamp(23px,7.4vw,42px);line-height:1;
+  padding:3px 7px 6px;background:var(--pk-paper);color:#000;
+  box-shadow:3px 3px 0 #000;display:inline-block}
+.ransom span:nth-child(3n){background:var(--pk-pink);color:#fff}
+.ransom span:nth-child(4n){background:var(--pk-acid);color:#000}
+.ransom span:nth-child(7n){background:#000;color:var(--pk-paper);
+  box-shadow:0 0 0 2px var(--pk-paper),3px 3px 0 var(--pk-pink)}
+.ransom span.sp{background:none!important;box-shadow:none!important;width:.3em;padding:0}
+.ransom span.br{flex-basis:100%;height:0;background:none!important;box-shadow:none!important;padding:0}
+.punk-sub{font-family:"Permanent Marker",var(--font-dis);color:var(--pk-pink);
+  font-size:clamp(13px,3.8vw,19px);transform:skewX(-8deg);transform-origin:left;
+  margin:0 0 13px;text-shadow:2px 2px 0 #000;line-height:1.3}
+.card.punk h2{color:var(--pk-paper);font-weight:800;font-size:15.5px;
+  border-left:6px solid var(--pk-acid);padding-left:10px;margin:0 0 14px}
+.card.punk p{color:#cbc6b8}
+.card.punk .rules li{background:rgba(244,241,232,.055);padding:8px 10px;
+  border-left:3px solid var(--pk-pink);grid-template-columns:24px 1fr}
+.card.punk .rules .ic{background:#000;border-radius:0;width:24px;height:24px;
+  box-shadow:0 0 0 1px rgba(244,241,232,.4)}
+.card.punk .rules b{color:var(--pk-acid)}
+.card.punk .hintbox{background:rgba(204,255,0,.10);border-left:5px solid var(--pk-acid);
+  border-radius:0;color:var(--pk-paper)}
+.card.punk .hintbox b{color:var(--pk-acid)}
+.card.punk .stagebtn{background:#141418;border-radius:0;color:var(--pk-paper);
+  border:2px solid rgba(244,241,232,.55);box-shadow:5px 5px 0 rgba(255,45,111,.85)}
+.card.punk .stagebtn:active{transform:translate(3px,3px);box-shadow:2px 2px 0 rgba(255,45,111,.85)}
+.card.punk .stagebtn .num{font-family:"Bungee",var(--font-dis);color:var(--pk-acid);font-size:19px}
+.card.punk .stagebtn .d{color:#a29d90}
+.card.punk .stagebtn .st{color:var(--pk-acid)}
+.card.punk .stagebtn.locked{opacity:.45;box-shadow:5px 5px 0 rgba(130,130,130,.45);cursor:not-allowed}
+.card.punk .stagebtn.pop{border-color:var(--pk-acid);
+  background:linear-gradient(100deg,#3a0620 0%,#141418 62%)}
+.card.punk .stagebtn.pop .num{color:var(--pk-pink)}
+.card.punk .btn{border-radius:0;border:2px solid var(--pk-paper);background:#141418;
+  box-shadow:4px 4px 0 var(--pk-pink)}
+.card.punk .btn.primary{background:var(--pk-pink);color:#0b0b0d;border-color:#0b0b0d;
+  box-shadow:4px 4px 0 var(--pk-acid)}
+.card.punk .btn:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--pk-pink)}
+.card.punk .scorerow div{background:#141418;border-radius:0;border:2px solid rgba(244,241,232,.3)}
+.card.punk .scorerow .k{color:var(--pk-acid)}
+.card.punk .stars{font-family:"Bungee",var(--font-dis);color:var(--pk-acid);
+  font-size:30px;letter-spacing:4px;text-shadow:3px 3px 0 var(--pk-pink)}
+.punkbanner{font-family:"Bungee",var(--font-dis);font-size:12px;letter-spacing:.05em;
+  line-height:1.5;background:var(--pk-acid);color:#000;padding:9px 11px;margin:14px 0 2px;
+  transform:rotate(-1.1deg);box-shadow:5px 5px 0 var(--pk-pink)}
+.punkbanner[hidden]{display:none!important}
+.slogan{font-family:"Bungee",var(--font-dis);font-size:10px;letter-spacing:.2em;
+  color:rgba(244,241,232,.45);margin-top:16px;text-align:right}
+@media (prefers-reduced-motion:no-preference){
+  .card.punk{animation:pkin .34s cubic-bezier(.2,1.4,.4,1) both}
+  @keyframes pkin{from{transform:rotate(4deg) scale(.9);opacity:0}to{transform:rotate(-.7deg) scale(1);opacity:1}}
+}
+
+@media (max-width:620px){
+  .sheet.punk{padding:18px 16px 34px}
+  .card.punk{padding:20px 14px 18px}
+  .card.punk .tape{width:100px}
+  #deck{gap:8px;padding:9px 10px calc(9px + env(safe-area-inset-bottom))}
+  #deck .grow{flex:1 1 100%}
+  #hint{font-size:11px}
+  #stagename{font-size:14px}
+  .chip{min-width:56px;padding:5px 9px}
+  .chip .v{font-size:18px}
+  #deck{padding:10px}
+  .btn{padding:9px 13px;font-size:13px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div id="app">
+  <div id="view">
+    <canvas id="gl"></canvas>
+    <div id="labels"></div>
+
+    <div id="hud" hidden>
+      <div class="chip good"><span class="k">せっきゃく</span><span class="v" id="hServed">0</span></div>
+      <div class="chip"><span class="k">ならび中</span><span class="v" id="hQueue">0</span></div>
+      <div class="chip bad"><span class="k">りだつ</span><span class="v" id="hAngry">0</span></div>
+      <div class="chip"><span class="k">かえり中</span><span class="v" id="hOut">0</span></div>
+      <div class="chip warn"><span class="k">のこり客</span><span class="v" id="hLeft">0</span></div>
+      <div id="gauge">
+        <div class="k"><span>ごきんじょ迷惑ゲージ</span><span id="gpct">0%</span></div>
+        <div id="gbar"><div id="gfill"></div></div>
+        <div class="nbrow">
+          <div class="nbm"><span id="nbN0">左隣</span><i><b id="nbB0"></b></i></div>
+          <div class="nbm"><span id="nbN1">右隣</span><i><b id="nbB1"></b></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="campad">
+      <button id="camL" title="左に回す" aria-label="カメラを左に回す">⟲</button>
+      <button id="camR" title="右に回す" aria-label="カメラを右に回す">⟳</button>
+      <button id="camIn" title="寄る" aria-label="ズームイン">＋</button>
+      <button id="camOut" title="引く" aria-label="ズームアウト">−</button>
+    </div>
+
+    <div id="toast"></div>
+
+    <!-- title -->
+    <div class="sheet punk" id="sTitle">
+      <div class="card punk">
+        <div class="tape t1"></div><div class="tape t2"></div>
+        <div class="kicker">NO RULES // NO REFUND // <em>ANARCHY IN THE 商店街</em></div>
+        <div class="ransom" id="tRansom" aria-label="行列さばき商店街"></div>
+        <div class="punk-sub">QUEUE IT UP OR SHUT IT DOWN.</div>
+        <div class="actions" style="margin-top:18px">
+          <button class="btn primary" id="bStart">▶ はじめる</button>
+        </div>
+        <div class="slogan">DIY OR DIE — 商店街支部</div>
+      </div>
+    </div>
+
+    <!-- stage select -->
+    <div class="sheet punk" id="sSelect" hidden>
+      <div class="card punk">
+        <div class="tape t1"></div><div class="tape t2"></div>
+        <div class="kicker">SELECT YOUR STAGE // <em>PICK YOUR RIOT</em></div>
+        <div class="ransom" id="sRansom" aria-label="ステージセレクト"></div>
+        <div class="stages" id="stageList"></div>
+        <div class="punkbanner" id="tBanner" hidden></div>
+        <div class="actions" style="margin-top:14px">
+          <button class="btn" id="bBackTitle">← タイトル</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- result -->
+    <div class="sheet punk" id="sResult" hidden>
+      <div class="card punk">
+        <div class="tape t1"></div><div class="tape t2"></div>
+        <div class="kicker" id="rKicker">CLOSING TIME</div>
+        <div class="ransom" id="rTitle"></div>
+        <div class="punk-sub" id="rSub"></div>
+        <div class="stars" id="rStars">★★★</div>
+        <p id="rMsg"></p>
+        <div class="punkbanner" id="rBanner" hidden></div>
+        <div class="scorerow">
+          <div><div class="k">せっきゃく</div><div class="v" id="rServed">0</div></div>
+          <div><div class="k">りだつ</div><div class="v" id="rAngry">0</div></div>
+          <div><div class="k">迷惑ど</div><div class="v" id="rNui">0%</div></div>
+          <div><div class="k">スコア</div><div class="v" id="rScore">0</div></div>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="rRetry">もう一回</button>
+          <button class="btn" id="rNext">次のステージ</button>
+          <button class="btn" id="rMenu">ステージ選択</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="deck">
+    <div class="grow">
+      <div id="stagename">ステージ</div>
+      <div id="hint">仕切りを置く場所をタップ／ドラッグ</div>
+    </div>
+    <div id="budgetwrap"><span class="k">仕切り</span><span id="budget">0</span><span class="k">こ</span></div>
+    <div class="seg" id="modeSeg">
+      <button id="mBar" aria-pressed="true">🚧 しきり</button>
+      <button id="mCam" aria-pressed="false">✋ カメラ</button>
+    </div>
+    <div class="seg" id="spdSeg" hidden>
+      <button data-s="1" aria-pressed="true">×1</button>
+      <button data-s="2" aria-pressed="false">×2</button>
+      <button data-s="4" aria-pressed="false">×4</button>
+    </div>
+    <button class="btn" id="bClear">ぜんぶ撤去</button>
+    <button class="btn primary" id="bOpen">開店する！</button>
+    <button class="btn" id="bAbort" hidden>やり直す</button>
+    <button class="btn" id="musicToggle" aria-pressed="true" title="BGMを切り替える">♪ BGM ON</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- shopping-street BGM ---------- */
+const bgm = new Audio('商店街の午後.m4a');
+bgm.loop = true;
+bgm.preload = 'auto';
+bgm.volume = 0.32;
+let musicOn = true;
+const musicButton = document.getElementById('musicToggle');
+function syncMusicButton(){
+  musicButton.setAttribute('aria-pressed', String(musicOn));
+  musicButton.textContent = musicOn ? '♪ BGM ON' : '♪ BGM OFF';
+}
+function startMusic(){
+  if(!musicOn) return;
+  const attempt = bgm.play();
+  if(attempt && typeof attempt.catch === 'function') attempt.catch(()=>{});
+}
+function toggleMusic(){
+  musicOn = !musicOn;
+  if(musicOn) startMusic();
+  else bgm.pause();
+  syncMusicButton();
+}
+musicButton.addEventListener('click', toggleMusic);
+syncMusicButton();
+
+/* ==================================================================
+   0. tiny 3D engine (raw WebGL, no libraries)
+   ================================================================== */
+const cv = document.getElementById('gl');
+const gl = cv.getContext('webgl', {antialias:true, alpha:true});
+if(!gl){ document.getElementById('view').innerHTML =
+  '<p style="padding:24px;color:#16202b;font-weight:700">このブラウザはWebGLに対応していないみたい…</p>'; return; }
+
+function sh(type, src){ const s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s)); return s; }
+function prog(vs,fs){ const p=gl.createProgram(); gl.attachShader(p,sh(gl.VERTEX_SHADER,vs));
+  gl.attachShader(p,sh(gl.FRAGMENT_SHADER,fs)); gl.linkProgram(p);
+  if(!gl.getProgramParameter(p,gl.LINK_STATUS)) console.error(gl.getProgramInfoLog(p)); return p; }
+
+const PSolid = prog(`
+  attribute vec3 aPos; attribute vec3 aNor; attribute vec3 aCol;
+  uniform mat4 uMVP; uniform vec3 uLight; uniform vec3 uCam;
+  varying vec3 vCol; varying float vSh; varying float vFog;
+  void main(){
+    gl_Position = uMVP*vec4(aPos,1.0);
+    vec3 n = normalize(aNor);
+    float d = max(dot(n,uLight),0.0);
+    float hemi = 0.5+0.5*n.y;
+    vSh = 0.58 + 0.40*d + 0.14*hemi;
+    vCol = aCol;
+    vFog = clamp((length(aPos-uCam)-24.0)/34.0,0.0,1.0);
+  }`,`
+  precision mediump float;
+  varying vec3 vCol; varying float vSh; varying float vFog;
+  uniform vec3 uFog;
+  void main(){
+    vec3 c = vCol*vSh;
+    c = mix(c, uFog, vFog*0.55);
+    gl_FragColor = vec4(c,1.0);
+  }`);
+const uSolid = {
+  mvp:gl.getUniformLocation(PSolid,'uMVP'), light:gl.getUniformLocation(PSolid,'uLight'),
+  cam:gl.getUniformLocation(PSolid,'uCam'), fog:gl.getUniformLocation(PSolid,'uFog')
+};
+const aSolid = { pos:gl.getAttribLocation(PSolid,'aPos'), nor:gl.getAttribLocation(PSolid,'aNor'),
+  col:gl.getAttribLocation(PSolid,'aCol') };
+
+const PBlob = prog(`
+  attribute vec3 aPos; attribute vec2 aUV; attribute float aA;
+  uniform mat4 uMVP; varying vec2 vUV; varying float vA;
+  void main(){ gl_Position=uMVP*vec4(aPos,1.0); vUV=aUV; vA=aA; }`,`
+  precision mediump float; varying vec2 vUV; varying float vA;
+  void main(){
+    float r = length(vUV);
+    float a = (1.0-smoothstep(0.45,1.0,r))*vA;
+    gl_FragColor = vec4(0.05,0.09,0.12,a);
+  }`);
+const uBlob = { mvp:gl.getUniformLocation(PBlob,'uMVP') };
+const aBlob = { pos:gl.getAttribLocation(PBlob,'aPos'), uv:gl.getAttribLocation(PBlob,'aUV'),
+  a:gl.getAttribLocation(PBlob,'aA') };
+
+/* --- matrices (column-major) --- */
+function mul(a,b){ const o=new Float32Array(16);
+  for(let c=0;c<4;c++) for(let r=0;r<4;r++){ let s=0;
+    for(let k=0;k<4;k++) s+=a[k*4+r]*b[c*4+k]; o[c*4+r]=s; } return o; }
+function persp(fovy,asp,n,f){ const t=1/Math.tan(fovy/2), o=new Float32Array(16);
+  o[0]=t/asp; o[5]=t; o[10]=(f+n)/(n-f); o[11]=-1; o[14]=2*f*n/(n-f); return o; }
+function viewM(eye,fwd,right,up){
+  const o=new Float32Array(16);
+  o[0]=right[0]; o[4]=right[1]; o[8]=right[2];
+  o[1]=up[0];    o[5]=up[1];    o[9]=up[2];
+  o[2]=-fwd[0];  o[6]=-fwd[1];  o[10]=-fwd[2];
+  o[12]=-(right[0]*eye[0]+right[1]*eye[1]+right[2]*eye[2]);
+  o[13]=-(up[0]*eye[0]+up[1]*eye[1]+up[2]*eye[2]);
+  o[14]= (fwd[0]*eye[0]+fwd[1]*eye[1]+fwd[2]*eye[2]);
+  o[15]=1; return o;
+}
+const norm=v=>{const l=Math.hypot(v[0],v[1],v[2])||1;return [v[0]/l,v[1]/l,v[2]/l];};
+const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+
+/* --- mesh building --- */
+function Mesh(){ this.v=[]; this.buf=gl.createBuffer(); this.n=0; }
+Mesh.prototype.reset=function(){ this.v.length=0; };
+Mesh.prototype.upload=function(){
+  gl.bindBuffer(gl.ARRAY_BUFFER,this.buf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(this.v),gl.DYNAMIC_DRAW);
+  this.n=this.v.length/9;
+};
+Mesh.prototype.draw=function(){
+  if(!this.n) return;
+  gl.bindBuffer(gl.ARRAY_BUFFER,this.buf);
+  const st=36;
+  gl.enableVertexAttribArray(aSolid.pos); gl.vertexAttribPointer(aSolid.pos,3,gl.FLOAT,false,st,0);
+  gl.enableVertexAttribArray(aSolid.nor); gl.vertexAttribPointer(aSolid.nor,3,gl.FLOAT,false,st,12);
+  gl.enableVertexAttribArray(aSolid.col); gl.vertexAttribPointer(aSolid.col,3,gl.FLOAT,false,st,24);
+  gl.drawArrays(gl.TRIANGLES,0,this.n);
+};
+
+const hex = h => [ ((h>>16)&255)/255, ((h>>8)&255)/255, (h&255)/255 ];
+// unit cube faces: [normal, 4 corners]
+const FACES = [
+  [[0,0,1],  [[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]]],
+  [[0,0,-1], [[1,-1,-1],[-1,-1,-1],[-1,1,-1],[1,1,-1]]],
+  [[1,0,0],  [[1,-1,1],[1,-1,-1],[1,1,-1],[1,1,1]]],
+  [[-1,0,0], [[-1,-1,-1],[-1,-1,1],[-1,1,1],[-1,1,-1]]],
+  [[0,1,0],  [[-1,1,1],[1,1,1],[1,1,-1],[-1,1,-1]]],
+  [[0,-1,0], [[-1,-1,-1],[1,-1,-1],[1,-1,1],[-1,-1,1]]]
+];
+/* box: center(cx,cy,cz), size(sx,sy,sz), color[3], optional yaw */
+function box(m,cx,cy,cz,sx,sy,sz,col,yaw){
+  const hx=sx/2,hy=sy/2,hz=sz/2;
+  const c = yaw?Math.cos(yaw):1, s = yaw?Math.sin(yaw):0;
+  const V=m.v;
+  for(let f=0;f<6;f++){
+    const nrm=FACES[f][0], q=FACES[f][1];
+    let nx=nrm[0]*c + nrm[2]*s, ny=nrm[1], nz=-nrm[0]*s + nrm[2]*c;
+    const p=[];
+    for(let i=0;i<4;i++){
+      let x=q[i][0]*hx, y=q[i][1]*hy, z=q[i][2]*hz;
+      const rx=x*c+z*s, rz=-x*s+z*c;
+      p.push([cx+rx, cy+y, cz+rz]);
+    }
+    const tri=[0,1,2, 0,2,3];
+    for(let i=0;i<6;i++){ const P=p[tri[i]];
+      V.push(P[0],P[1],P[2], nx,ny,nz, col[0],col[1],col[2]); }
+  }
+}
+/* flat quad on ground at height y */
+function quad(m,x0,z0,x1,z1,y,col){
+  const V=m.v;
+  const pts=[[x0,y,z0],[x1,y,z0],[x1,y,z1],[x0,y,z1]];
+  const tri=[0,2,1,0,3,2];   // wound so the face points +Y
+  for(let i=0;i<6;i++){ const P=pts[tri[i]]; V.push(P[0],P[1],P[2], 0,1,0, col[0],col[1],col[2]); }
+}
+
+/* shadow blobs */
+const blobMesh = { v:[], buf:gl.createBuffer(), n:0 };
+function blob(x,z,r,a){
+  const V=blobMesh.v, y=0.015;
+  const p=[[x-r,y,z-r,-1,-1],[x+r,y,z-r,1,-1],[x+r,y,z+r,1,1],[x-r,y,z+r,-1,1]];
+  const tri=[0,2,1,0,3,2];
+  for(let i=0;i<6;i++){ const P=p[tri[i]]; V.push(P[0],P[1],P[2],P[3],P[4],a); }
+}
+
+/* ==================================================================
+   1. stages
+   ================================================================== */
+const W=16, D=12;
+const R = (x0,z0,x1,z1)=>({x0,z0,x1,z1});
+const inR=(r,x,z)=> x>=r.x0&&x<=r.x1&&z>=r.z0&&z<=r.z1;
+
+const STAGES = [
+  {
+    name:'まちかど商店',
+    sub:'まずは広い敷地でウォーミングアップ',
+    shop:R(5,0,10,1), door:{x:7,z:2},
+    exit:{x:10,z:2},
+    backL:R(0,0,4,1), backR:R(11,0,15,1),
+    yard:R(4,2,11,7),
+    nb:[R(0,2,3,5), R(12,2,15,5)],
+    nbName:['お隣：花屋','お隣：パン屋'],
+    keep:[], trees:[],
+    budget:22, total:16, interval:1.8, serve:2.4, patience:76, shopTime:3.0,
+    spawn:[{x:1.5,z:10.5},{x:14.5,z:10.5}],
+    allowAngry:2,
+    hint:'道路ぎわに壁を作って入口を1か所に。帰り道も1本あけて。'
+  },
+  {
+    name:'せまい間口',
+    sub:'敷地は6m四方。植木もじゃまをする',
+    shop:R(5,0,10,1), door:{x:5,z:2},
+    exit:{x:10,z:2},
+    backL:R(0,0,4,1), backR:R(11,0,15,1),
+    yard:R(5,2,10,7),
+    nb:[R(0,2,4,6), R(11,2,15,6)],
+    nbName:['お隣：本屋','お隣：クリーニング'],
+    keep:[], trees:[{x:9,z:4}],
+    budget:26, total:24, interval:1.25, serve:2.4, patience:92, shopTime:3.2,
+    spawn:[{x:1.5,z:10.5},{x:14.5,z:10.5}],
+    allowAngry:2,
+    hint:'つづら折りにすると倍以上ならべるよ。'
+  },
+  {
+    name:'商店街の激戦区',
+    sub:'お隣の入口(赤)は絶対にふさげない',
+    shop:R(6,0,10,1), door:{x:6,z:2},
+    backL:R(0,0,5,1), backR:R(11,0,15,1),
+    yard:R(6,2,10,6),
+    nb:[R(0,2,5,6), R(11,2,15,6)],
+    nbName:['お隣：定食屋','お隣：薬局'],
+    exit:{x:10,z:2},
+    keep:[{x:3,z:2},{x:3,z:3},{x:3,z:4}], trees:[{x:12,z:4}],
+    budget:32, total:26, interval:1.25, serve:2.3, patience:100, shopTime:3.2,
+    spawn:[{x:1.5,z:10.5},{x:14.5,z:10.5}],
+    allowAngry:3,
+    hint:'行きと帰りを分けないと出口で詰まる。'
+  },
+  {
+    name:'雨のち行列',
+    sub:'植木がじゃま。お隣の入口も死守',
+    shop:R(5,0,9,1), door:{x:8,z:2},
+    exit:{x:5,z:2},
+    backL:R(0,0,4,1), backR:R(10,0,15,1),
+    yard:R(5,2,9,7),
+    nb:[R(0,2,4,7), R(10,2,15,7)],
+    nbName:['お隣：靴屋','お隣：文房具店'],
+    keep:[{x:3,z:2},{x:3,z:3}], trees:[{x:6,z:5}],
+    budget:34, total:30, interval:1.2, serve:2.2, patience:104, shopTime:3.4,
+    spawn:[{x:1.5,z:10.5},{x:14.5,z:10.5}],
+    allowAngry:3,
+    hint:'植木を柱がわりに折り返すと省スペース。'
+  },
+  {
+    name:'角地の行列',
+    sub:'間口4m。左右どっちもお隣の入口',
+    shop:R(6,0,9,1), door:{x:9,z:2},
+    exit:{x:6,z:2},
+    backL:R(0,0,5,1), backR:R(10,0,15,1),
+    yard:R(6,2,9,7),
+    nb:[R(0,2,5,7), R(10,2,15,7)],
+    nbName:['お隣：魚屋','お隣：花火屋'],
+    keep:[{x:4,z:2},{x:4,z:3},{x:11,z:2},{x:11,z:3}], trees:[{x:7,z:4}],
+    budget:36, total:32, interval:1.15, serve:2.1, patience:110, shopTime:3.4,
+    spawn:[{x:1.5,z:10.5},{x:14.5,z:10.5}],
+    allowAngry:3,
+    hint:'幅4mでも6段折り返せば30人は入る。'
+  },
+  {
+    name:'年末大売り出し',
+    sub:'奥行き5m。並ぶ列と帰り道の取り合い',
+    shop:R(6,0,10,1), door:{x:6,z:2},
+    backL:R(0,0,5,1), backR:R(11,0,15,1),
+    yard:R(6,2,10,6),
+    nb:[R(0,2,5,6), R(11,2,15,6)],
+    nbName:['お隣：酒屋','お隣：時計店'],
+    exit:{x:10,z:2},
+    keep:[{x:5,z:2},{x:5,z:3},{x:12,z:2},{x:12,z:3}], trees:[{x:9,z:4}],
+    budget:38, total:36, interval:1.05, serve:2.0, patience:120, shopTime:3.5,
+    spawn:[{x:1.5,z:10.5},{x:14.5,z:10.5}],
+    allowAngry:4,
+    hint:'ラスト。並ぶ列と帰り道、何マスずつ割く？'
+  },
+  {
+    name:'大人気モード',
+    sub:'開店前から10人!! 帰り客も容赦なし',
+    shop:R(6,0,10,1), door:{x:6,z:2},
+    exit:{x:10,z:2},
+    backL:R(0,0,5,1), backR:R(11,0,15,1),
+    yard:R(6,2,10,7),
+    nb:[R(0,2,5,7), R(11,2,15,7)],
+    nbName:['お隣：レコード店','お隣：古着屋'],
+    keep:[{x:4,z:2},{x:4,z:3},{x:12,z:2},{x:12,z:3}], trees:[{x:7,z:5}],
+    budget:44, total:44, interval:0.95, serve:1.9, patience:132, shopTime:3.2,
+    spawn:[{x:1.5,z:10.5},{x:14.5,z:10.5}],
+    allowAngry:5, preQueue:10, popular:true,
+    hint:'開店した瞬間に10人。帰り客も出てくるぞ。'
+  }
+];
+const NORMAL_STAGES = STAGES.filter(s=>!s.popular).length;
+
+/* ==================================================================
+   2. grid state
+   ================================================================== */
+let ST = null;               // current stage def
+let cellType = new Array(W*D);  // 'wall'|'yard'|'road'|'nb'|'keep'
+let vWall = new Uint8Array((W+1)*D);
+let hWall = new Uint8Array(W*(D+1));
+let fixV  = new Uint8Array((W+1)*D);   // permanent boundary fence with the neighbours
+let usedBarriers = 0;
+let dist = new Float32Array(W*D);
+let distOut = new Float32Array(W*D);   // cost-to-reach-the-pavement, for customers going home
+let frontOwner = new Uint8Array(W*D);   // 0 = left neighbour's frontage, 1 = right, 255 = ours
+let walkZ = 0;                          // z row of the pavement
+
+const ci = (x,z)=> x*D+z;
+const inB = (x,z)=> x>=0&&x<W&&z>=0&&z<D;
+const tAt = (x,z)=> inB(x,z)?cellType[ci(x,z)]:'wall';
+const vIdx = (x,z)=> x*D+z;
+const hIdx = (x,z)=> x*(D+1)+z;
+
+function buildStage(s){
+  ST=s;
+  vWall.fill(0); hWall.fill(0); usedBarriers=0;
+  for(let x=0;x<W;x++) for(let z=0;z<D;z++){
+    let t='road';
+    if(inR(s.shop,x,z)||inR(s.backL,x,z)||inR(s.backR,x,z)) t='wall';
+    else if(inR(s.yard,x,z)) t='yard';
+    else { for(const r of s.nb) if(inR(r,x,z)) t='nb'; }
+    cellType[ci(x,z)]=t;
+  }
+  for(const k of s.keep) cellType[ci(k.x,k.z)]='keep';
+  // the pavement: one strip of road right in front of the shops.
+  // pedestrians use this, cars never do.
+  walkZ = s.yard.z1+1;
+  for(let x=0;x<W;x++) if(cellType[ci(x,walkZ)]==='road') cellType[ci(x,walkZ)]='walk';
+  // whose shopfront is each bit of pavement/road in front of?  -1 = ours
+  frontOwner.fill(255);
+  for(let x=0;x<W;x++) for(let z=0;z<D;z++){
+    const t=cellType[ci(x,z)];
+    if(t!=='walk'&&t!=='road'&&t!=='keep') continue;
+    if(x<=s.nb[0].x1) frontOwner[ci(x,z)]=0;
+    else if(x>=s.nb[1].x0) frontOwner[ci(x,z)]=1;
+  }
+  s.spawn=[{x:1.5,z:walkZ+0.5},{x:W-1.5,z:walkZ+0.5}];
+  for(const t of s.trees) cellType[ci(t.x,t.z)]='wall';
+  fixV.fill(0);
+  for(let z=s.yard.z0; z<=s.yard.z1; z++){
+    fixV[vIdx(s.yard.x0,z)]=1;
+    fixV[vIdx(s.yard.x1+1,z)]=1;
+  }
+  buildStatic();
+  recomputeField();
+  buildGuides();
+  initCars();
+}
+
+const COST = {yard:1.0, walk:1.12, road:2.6, nb:1.9, keep:3.2};
+function recomputeField(){
+  dist.fill(Infinity);
+  const d0=ci(ST.door.x,ST.door.z);
+  dist[d0]=0;
+  const done=new Uint8Array(W*D);
+  for(let it=0;it<W*D;it++){
+    let best=-1,bv=Infinity;
+    for(let i=0;i<W*D;i++) if(!done[i]&&dist[i]<bv){bv=dist[i];best=i;}
+    if(best<0||bv===Infinity) break;
+    done[best]=1;
+    const x=(best/D)|0, z=best%D;
+    const nb=[[x+1,z],[x-1,z],[x,z+1],[x,z-1]];
+    for(const [nx,nz] of nb){
+      if(!inB(nx,nz)) continue;
+      const t=tAt(nx,nz); if(t==='wall') continue;
+      if(wallBetween(x,z,nx,nz)) continue;
+      const nd=bv+COST[t];
+      if(nd<dist[ci(nx,nz)]) dist[ci(nx,nz)]=nd;
+    }
+  }
+  recomputeOut();
+}
+/* second field: every pavement cell is a goal, so shoppers can find their way out */
+function recomputeOut(){
+  distOut.fill(Infinity);
+  for(let x=0;x<W;x++){ const i=ci(x,walkZ); if(cellType[i]==='walk') distOut[i]=0; }
+  const done=new Uint8Array(W*D);
+  for(let it=0;it<W*D;it++){
+    let best=-1,bv=Infinity;
+    for(let i=0;i<W*D;i++) if(!done[i]&&distOut[i]<bv){bv=distOut[i];best=i;}
+    if(best<0||bv===Infinity) break;
+    done[best]=1;
+    const x=(best/D)|0, z=best%D;
+    for(const [nx,nz] of [[x+1,z],[x-1,z],[x,z+1],[x,z-1]]){
+      if(!inB(nx,nz)) continue;
+      const t=tAt(nx,nz); if(t==='wall') continue;
+      if(wallBetween(x,z,nx,nz)) continue;
+      const nd=bv+COST[t];
+      if(nd<distOut[ci(nx,nz)]) distOut[ci(nx,nz)]=nd;
+    }
+  }
+}
+function wallBetween(x0,z0,x1,z1){
+  if(x1===x0+1){ const i=vIdx(x0+1,z0); return !!(vWall[i]||fixV[i]); }
+  if(x1===x0-1){ const i=vIdx(x0,z0);   return !!(vWall[i]||fixV[i]); }
+  if(z1===z0+1) return !!hWall[hIdx(x0,z0+1)];
+  if(z1===z0-1) return !!hWall[hIdx(x0,z0)];
+  return false;
+}
+function reachIn(){
+  for(const sp of ST.spawn){
+    const x=Math.floor(sp.x), z=Math.floor(sp.z);
+    if(!isFinite(dist[ci(x,z)])) return false;
+  }
+  return true;
+}
+function reachOut(){ return isFinite(distOut[ci(ST.exit.x,ST.exit.z)]); }
+function reachable(){ return reachIn() && reachOut(); }
+/* edge legality: at least one side is our own yard, neither side is a building */
+function edgeOK(kind,x,z){
+  if(kind==='v'){
+    if(x<1||x>W-1||z<0||z>=D) return false;
+    if(fixV[vIdx(x,z)]) return false;
+    const a=tAt(x-1,z), b=tAt(x,z);
+    if(a==='wall'||b==='wall') return false;
+    return a==='yard'||b==='yard';
+  } else {
+    if(z<1||z>D-1||x<0||x>=W) return false;
+    const a=tAt(x,z-1), b=tAt(x,z);
+    if(a==='wall'||b==='wall') return false;
+    return a==='yard'||b==='yard';
+  }
+}
+
+/* ==================================================================
+   3. static & guide meshes
+   ================================================================== */
+const mStatic=new Mesh(), mGuide=new Mesh(), mBar=new Mesh(), mDyn=new Mesh();
+
+const C = {
+  yard:hex(0xEFE1C6), yard2:hex(0xE8D8B8),
+  road:hex(0x5E6873), road2:hex(0x69737E), line:hex(0xE9E3D2),
+  walk:hex(0xB6BCC2), walk2:hex(0xC2C8CD), kerb:hex(0xDCE0E3),
+  nb:[hex(0xD8CFE6),hex(0xCFE3DA)],
+  keep:hex(0xE8A0A8),
+  base:hex(0xBDB3A6), baseBody:hex(0x6E6357),
+  shop:hex(0xF2765C), shopTrim:hex(0xFFF4E3), roof:hex(0x2E4356),
+  nbBld:[hex(0x8E7BB0),hex(0x62A08D)],
+  door:hex(0x2A3340), sign:hex(0xFFC145),
+  exitDoor:hex(0x2C5C86), exitTrim:hex(0x8FD8EE),
+  matIn:hex(0x79C79A), matOut:hex(0x7FB6DE), flowOut:hex(0x3F79B8),
+  post:hex(0x3A4350), cap:hex(0xC9D2DB),
+  beltA:hex(0xE8455C), beltB:hex(0xFFF4E3),
+  trunk:hex(0x7A5438), leaf:hex(0x4FA463), leaf2:hex(0x62BE77),
+  fence:hex(0xB9B0A2), fenceCap:hex(0x8E857A),
+  guide:hex(0x8C9E8F), guideHot:hex(0xF2765C), flow:hex(0x2FA89B)
+};
+
+function buildStatic(){
+  mStatic.reset();
+  // the block is a model kit: a soil body with a paved top plate
+  box(mStatic, W/2,-0.95,D/2, W+2.6,1.4,D+2.6, C.baseBody);
+  box(mStatic, W/2,-0.15,D/2, W+3.0,0.2,D+3.0, C.base);
+  for(let x=0;x<W;x++) for(let z=0;z<D;z++){
+    const t=cellType[ci(x,z)];
+    if(t==='wall') continue;
+    let col;
+    if(t==='yard') col = ((x+z)%2)?C.yard:C.yard2;
+    else if(t==='road') col = ((x+z)%2)?C.road:C.road2;
+    else if(t==='walk') col = ((x+z)%2)?C.walk:C.walk2;
+    else if(t==='keep') col = C.keep;
+    else { col = inR(ST.nb[0],x,z)?C.nb[0]:C.nb[1]; }
+    quad(mStatic, x+0.035,z+0.035,x+0.965,z+0.965, 0.0, col);
+  }
+  // road centre dashes
+  const rz = D-1.5;
+  for(let x=0.5;x<W;x+=2) quad(mStatic, x,rz-0.06,x+1.1,rz+0.06, 0.02, C.line);
+  // kerb along the pavement edge
+  for(let x=0;x<W;x++) box(mStatic, x+0.5, 0.055, walkZ+1, 1.0,0.13,0.14, C.kerb);
+
+  // our shop
+  const s=ST.shop, cx=(s.x0+s.x1+1)/2, cz=(s.z0+s.z1+1)/2;
+  const sw=s.x1-s.x0+1, sd=s.z1-s.z0+1;
+  box(mStatic, cx,1.5,cz, sw,3.0,sd, C.shop);
+  box(mStatic, cx,3.15,cz, sw+0.4,0.35,sd+0.4, C.roof);
+  box(mStatic, cx,3.6,cz-0.1, sw*0.55,0.6,0.3, C.sign);
+  // awning stripes along the front face
+  const fz = s.z1+1;
+  for(let i=0;i<sw*2;i++){
+    const x0=s.x0+i*0.5;
+    box(mStatic, x0+0.25, 2.25, fz+0.22, 0.5,0.14,0.75, (i%2)?C.shopTrim:C.shop);
+  }
+  box(mStatic, cx, 2.35, fz+0.55, sw, 0.16, 0.16, C.roof);
+  // entrance
+  box(mStatic, ST.door.x+0.5, 0.9, fz-0.02, 1.25, 1.8, 0.12, C.door);
+  box(mStatic, ST.door.x+0.5, 1.85, fz-0.02, 1.45, 0.16, 0.16, C.shopTrim);
+  quad(mStatic, ST.door.x+0.12, fz+0.06, ST.door.x+0.88, fz+0.5, 0.012, C.matIn);
+  // exit — where customers come back out once they have paid
+  box(mStatic, ST.exit.x+0.5, 0.9, fz-0.02, 1.25, 1.8, 0.12, C.exitDoor);
+  box(mStatic, ST.exit.x+0.5, 1.85, fz-0.02, 1.45, 0.16, 0.16, C.exitTrim);
+  box(mStatic, ST.exit.x+0.5, 2.62, fz+0.30, 0.62, 0.26, 0.08, C.exitTrim);
+  quad(mStatic, ST.exit.x+0.12, fz+0.06, ST.exit.x+0.88, fz+0.5, 0.012, C.matOut);
+
+  // neighbours
+  [ST.backL,ST.backR].forEach((r,i)=>{
+    const w=r.x1-r.x0+1, d=r.z1-r.z0+1;
+    const bx=(r.x0+r.x1+1)/2, bz=(r.z0+r.z1+1)/2;
+    box(mStatic, bx,1.15,bz, w,2.3,d, C.nbBld[i]);
+    box(mStatic, bx,2.45,bz, w+0.3,0.3,d+0.3, C.roof);
+  });
+  // neighbour doorway markers for keep-clear cells
+  for(const k of ST.keep){
+    box(mStatic, k.x+0.5, 0.06, k.z+0.5, 0.9,0.12,0.9, C.keep);
+  }
+  // boundary fence with the neighbours — always there, not the player's to move
+  for(let z=ST.yard.z0;z<=ST.yard.z1;z++){
+    for(const fx of [ST.yard.x0, ST.yard.x1+1]){
+      box(mStatic, fx, 0.42, z+0.5, 0.17,0.84,1.0, C.fence);
+      box(mStatic, fx, 0.88, z+0.5, 0.25,0.1,1.0, C.fenceCap);
+    }
+  }
+  // trees
+  for(const t of ST.trees){
+    box(mStatic, t.x+0.5,0.45,t.z+0.5, 0.26,0.9,0.26, C.trunk);
+    box(mStatic, t.x+0.5,1.15,t.z+0.5, 1.0,0.7,1.0, C.leaf);
+    box(mStatic, t.x+0.5,1.6,t.z+0.5, 0.66,0.5,0.66, C.leaf2);
+  }
+  mStatic.upload();
+}
+
+function buildGuides(){
+  mGuide.reset();
+  // ticks marking every edge a barrier may go on
+  for(let x=0;x<=W;x++) for(let z=0;z<D;z++)
+    if(edgeOK('v',x,z) && !vWall[vIdx(x,z)])
+      quad(mGuide, x-0.055,z+0.30,x+0.055,z+0.70, 0.03, C.guide);
+  for(let x=0;x<W;x++) for(let z=0;z<=D;z++)
+    if(edgeOK('h',x,z) && !hWall[hIdx(x,z)])
+      quad(mGuide, x+0.30,z-0.055,x+0.70,z+0.055, 0.03, C.guide);
+  // where the line will actually run: one chevron per own-land cell
+  for(let x=ST.yard.x0;x<=ST.yard.x1;x++) for(let z=ST.yard.z0;z<=ST.yard.z1;z++){
+    if(tAt(x,z)!=='yard') continue;
+    if(!isFinite(dist[ci(x,z)])) continue;
+    if(x===ST.door.x&&z===ST.door.z) continue;
+    let bd=dist[ci(x,z)], bx=null, bz=null;
+    for(const [nx,nz] of [[x+1,z],[x-1,z],[x,z+1],[x,z-1]]){
+      if(!inB(nx,nz)||tAt(nx,nz)==='wall'||wallBetween(x,z,nx,nz)) continue;
+      if(dist[ci(nx,nz)]<bd){ bd=dist[ci(nx,nz)]; bx=nx; bz=nz; }
+    }
+    if(bx===null) continue;
+    const dx=bx-x, dz=bz-z, yaw=Math.atan2(dx,dz);
+    const cxp=x+0.5+dz*0.17, czp=z+0.5-dx*0.17;
+    box(mGuide, cxp+dx*0.10, 0.035, czp+dz*0.10, 0.12,0.02,0.44, C.flow, yaw);
+    box(mGuide, cxp+dx*0.28, 0.035, czp+dz*0.28, 0.23,0.02,0.23, C.flow, yaw+Math.PI/4);
+  }
+  // and the way home: where paying customers will walk back out
+  for(let x=ST.yard.x0;x<=ST.yard.x1;x++) for(let z=ST.yard.z0;z<=ST.yard.z1;z++){
+    if(tAt(x,z)!=='yard') continue;
+    if(!isFinite(distOut[ci(x,z)])||distOut[ci(x,z)]===0) continue;
+    let bd=distOut[ci(x,z)], bx=null, bz=null;
+    for(const [nx,nz] of [[x+1,z],[x-1,z],[x,z+1],[x,z-1]]){
+      if(!inB(nx,nz)||tAt(nx,nz)==='wall'||wallBetween(x,z,nx,nz)) continue;
+      if(distOut[ci(nx,nz)]<bd){ bd=distOut[ci(nx,nz)]; bx=nx; bz=nz; }
+    }
+    if(bx===null) continue;
+    const dx=bx-x, dz=bz-z, yaw=Math.atan2(dx,dz);
+    const cxp=x+0.5-dz*0.17, czp=z+0.5+dx*0.17;
+    box(mGuide, cxp+dx*0.10, 0.033, czp+dz*0.10, 0.10,0.02,0.36, C.flowOut, yaw);
+    box(mGuide, cxp+dx*0.26, 0.033, czp+dz*0.26, 0.19,0.02,0.19, C.flowOut, yaw+Math.PI/4);
+  }
+  mGuide.upload();
+}
+
+function barrierGeom(m,kind,x,z,ghost){
+  const post = ghost?C.guideHot:C.post;
+  const bA = ghost?C.guideHot:C.beltA, bB = ghost?C.guideHot:C.beltB;
+  const y=0.5;
+  if(kind==='v'){
+    box(m, x, 0.5, z+0.12, 0.13,1.0,0.13, post);
+    box(m, x, 0.5, z+0.88, 0.13,1.0,0.13, post);
+    box(m, x, 1.03, z+0.12, 0.18,0.07,0.18, C.cap);
+    box(m, x, 1.03, z+0.88, 0.18,0.07,0.18, C.cap);
+    for(let i=0;i<4;i++)
+      box(m, x, 0.72, z+0.19+i*0.19, 0.06,0.13,0.19, (i%2)?bA:bB);
+  } else {
+    box(m, x+0.12, 0.5, z, 0.13,1.0,0.13, post);
+    box(m, x+0.88, 0.5, z, 0.13,1.0,0.13, post);
+    box(m, x+0.12, 1.03, z, 0.18,0.07,0.18, C.cap);
+    box(m, x+0.88, 1.03, z, 0.18,0.07,0.18, C.cap);
+    for(let i=0;i<4;i++)
+      box(m, x+0.19+i*0.19, 0.72, z, 0.19,0.13,0.06, (i%2)?bA:bB);
+  }
+}
+function buildBarriers(){
+  mBar.reset();
+  for(let x=0;x<=W;x++) for(let z=0;z<D;z++) if(vWall[vIdx(x,z)]) barrierGeom(mBar,'v',x,z,false);
+  for(let x=0;x<W;x++) for(let z=0;z<=D;z++) if(hWall[hIdx(x,z)]) barrierGeom(mBar,'h',x,z,false);
+  mBar.upload();
+}
+
+/* ==================================================================
+   4. camera
+   ================================================================== */
+const cam = { az:Math.PI*0.5, el:0.80, dist:20.5, tx:W/2, tz:D/2-0.2 };
+let eye=[0,0,0], fwd=[0,0,-1], right=[1,0,0], upv=[0,1,0], VP=null, aspect=1;
+const FOV = 42*Math.PI/180;
+
+function updateCam(){
+  const ce=Math.cos(cam.el), se=Math.sin(cam.el);
+  // tall/narrow viewports need to pull back so the whole block stays in frame
+  const fit = aspect<1.15 ? Math.min(1.30, 1.15/Math.max(0.5,aspect)) : 1;
+  const dd = cam.dist*fit;
+  eye=[ cam.tx + dd*ce*Math.cos(cam.az), dd*se, cam.tz + dd*ce*Math.sin(cam.az) ];
+  const tgt=[cam.tx,0.6,cam.tz];
+  fwd=norm([tgt[0]-eye[0],tgt[1]-eye[1],tgt[2]-eye[2]]);
+  right=norm(cross(fwd,[0,1,0]));
+  upv=cross(right,fwd);
+  VP = mul(persp(FOV,aspect,0.5,140), viewM(eye,fwd,right,upv));
+}
+function pickGround(px,py){
+  const rect=cv.getBoundingClientRect();
+  const ndcX=((px-rect.left)/rect.width)*2-1;
+  const ndcY=1-((py-rect.top)/rect.height)*2;
+  const t=Math.tan(FOV/2);
+  const dir=norm([
+    fwd[0]+right[0]*ndcX*aspect*t+upv[0]*ndcY*t,
+    fwd[1]+right[1]*ndcX*aspect*t+upv[1]*ndcY*t,
+    fwd[2]+right[2]*ndcX*aspect*t+upv[2]*ndcY*t]);
+  if(Math.abs(dir[1])<1e-5) return null;
+  const k=-eye[1]/dir[1];
+  if(k<0) return null;
+  return {x:eye[0]+dir[0]*k, z:eye[2]+dir[2]*k};
+}
+function project(x,y,z){
+  const v=[x,y,z,1], o=[0,0,0,0];
+  for(let r=0;r<4;r++){ let s=0; for(let k=0;k<4;k++) s+=VP[k*4+r]*v[k]; o[r]=s; }
+  if(o[3]<=0.01) return null;
+  return { x:(o[0]/o[3]*0.5+0.5)*cv.clientWidth, y:(1-(o[1]/o[3]*0.5+0.5))*cv.clientHeight };
+}
+function resize(){
+  const r=cv.getBoundingClientRect();
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const w=Math.max(1,Math.round(r.width*dpr)), h=Math.max(1,Math.round(r.height*dpr));
+  if(cv.width!==w||cv.height!==h){ cv.width=w; cv.height=h; }
+  aspect = r.width/Math.max(1,r.height);
+}
+
+/* ==================================================================
+   5. game state
+   ================================================================== */
+const PHASE={TITLE:0,SETUP:1,RUN:2,END:3};
+let phase=PHASE.TITLE;
+let stageIdx=0;
+let speed=1;
+let cust=[], spawned=0, served=0, angry=0, nuisance=0, spawnT=0, clock=0;
+let nbAnger=[0,0], nbHit=[0,0];
+let serving=null, orderSeq=0;
+const SHIRTS=[0xF2765C,0x4FA6C9,0x62BE77,0xFFC145,0xC97BB8,0x5C6FE0,0xE8455C,0x2FA89B,0xE58B4A,0x8E7BB0];
+const SKIN=[0xF2C9A0,0xE0A97C,0xC98B5E,0xFAD9BC];
+const HAIR=[0x2A2622,0x4A3728,0x6B4A2F,0x1E1B18,0x8A6A45];
+
+function newCustomer(sp){
+  return {
+    x:sp.x + (Math.random()-0.5)*0.5, z:sp.z + (Math.random()-0.5)*0.5,
+    i:orderSeq++, face:-Math.PI/2, wait:0, state:'walk', t:0, stuck:0,
+    shirt:hex(SHIRTS[(Math.random()*SHIRTS.length)|0]),
+    skin:hex(SKIN[(Math.random()*SKIN.length)|0]),
+    hair:hex(HAIR[(Math.random()*HAIR.length)|0]),
+    ph:Math.random()*6.28, fade:1, h:0.94+Math.random()*0.14, bag:false, squeezed:0
+  };
+}
+
+/* ---------- traffic on the road in front of the shop ---------- */
+let cars=[];
+const CARCOL=[0xE8455C,0x2FA89B,0xFFC145,0x5C6FE0,0xF2765C,0xEDE6D6,0x8E7BB0,0x62BE77,0x3A4350];
+const LANES=[{z:(D-1.5)-0.45,dir:1},{z:(D-1.5)+0.45,dir:-1}];
+function initCars(){
+  cars=[];
+  const per=3, span=(W+10)/per;
+  LANES.forEach((L,li)=>{
+    for(let i=0;i<per;i++){
+      cars.push({
+        lane:li, z:L.z, dir:L.dir,
+        x: L.dir>0 ? -5+i*span : W+5-i*span,
+        v: 3.2+Math.random()*1.8, cur:3.2,
+        col: hex(CARCOL[(Math.random()*CARCOL.length)|0]),
+        van: Math.random()<0.32, honk:0
+      });
+    }
+  });
+}
+function stepCars(dt){
+  for(const c of cars){
+    let block=false;
+    for(let i=0;i<cust.length;i++){
+      const p=cust[i];
+      if(p.state==='enter'||p.state==='serve') continue;
+      if(Math.abs(p.z-c.z)>0.78) continue;
+      const ahead=(p.x-c.x)*c.dir;
+      if(ahead>-0.7 && ahead<3.4){ block=true; break; }
+    }
+    if(!block){                       // don't drive through the car ahead either
+      for(const o of cars){
+        if(o===c||o.lane!==c.lane) continue;
+        const ahead=(o.x-c.x)*c.dir;
+        if(ahead>0 && ahead<2.6){ block=true; break; }
+      }
+    }
+    const target = block ? 0.18 : c.v;
+    c.cur += (target-c.cur)*Math.min(1,dt*3.4);
+    c.x += c.cur*c.dir*dt;
+    c.honk = block ? Math.min(1,c.honk+dt*1.9) : Math.max(0,c.honk-dt*1.6);
+    if(c.dir>0 && c.x>W+6){ c.x=-6; c.v=3.2+Math.random()*1.8; c.honk=0; }
+    if(c.dir<0 && c.x<-6){ c.x=W+6; c.v=3.2+Math.random()*1.8; c.honk=0; }
+  }
+}
+function drawCars(){
+  for(const c of cars){
+    if(c.x<-4||c.x>W+4) continue;
+    const jig = Math.sin(clock*13+c.lane*2.1+c.x*0.5)*0.014*(c.cur>1?1:0.2);
+    const y = 0.30+jig;
+    const bodyL = c.van?2.15:1.85, bodyH = c.van?0.50:0.42;
+    box(mDyn, c.x, y+ (c.van?0.04:0), c.z, bodyL,bodyH,0.88, c.col);
+    // cabin + windscreen band
+    const cx2 = c.x - c.dir*(c.van?0.18:0.10);
+    box(mDyn, cx2, y+0.36, c.z, c.van?1.25:1.00, 0.36, 0.78, c.col);
+    box(mDyn, cx2, y+0.40, c.z, c.van?1.05:0.84, 0.18, 0.82, hex(0x2A3340));
+    // wheels
+    for(const sx of [-bodyL*0.33,bodyL*0.33]) for(const sz of [-0.44,0.44])
+      box(mDyn, c.x+sx, 0.14, c.z+sz, 0.36,0.28,0.13, hex(0x1E1B18));
+    // lamps
+    box(mDyn, c.x+c.dir*(bodyL/2-0.02), y+0.04, c.z, 0.07,0.13,0.62, hex(0xFFF0B0));
+    box(mDyn, c.x-c.dir*(bodyL/2-0.02), y+0.04, c.z, 0.07,0.13,0.62, hex(0xE8455C));
+    if(c.honk>0.5){
+      const s=0.17+Math.sin(clock*24)*0.05;
+      box(mDyn, c.x+c.dir*0.5, 1.12, c.z, s,s,s, hex(0xFFC145), clock*3.2);
+    }
+    blob(c.x, c.z, 0.82, 0.42);
+  }
+}
+
+function startStage(i){
+  stageIdx=i;
+  buildStage(STAGES[i]);
+  buildBarriers();
+  cust=[]; spawned=0; served=0; angry=0; nuisance=0; spawnT=0; clock=0; serving=null; orderSeq=0;
+  nbAnger=[0,0]; nbHit=[0,0];
+  phase=PHASE.SETUP;
+  cam.az=Math.PI*0.5; cam.el=0.80; cam.dist=20.5;
+  cam.tx=(ST.yard.x0+ST.yard.x1+1)/2;
+  cam.tz=(ST.yard.z0+ST.yard.z1+1)/2+1.2;
+  syncUI();
+}
+
+/* ---------- simulation ---------- */
+const RAD=0.26, BLOCK=0.72, SEP=0.56, SPEED=1.75;
+
+function step(dt){
+  clock+=dt;
+  // spawn
+  if(spawned<ST.total){
+    spawnT-=dt;
+    if(spawnT<=0){
+      spawnT = ST.interval*(0.8+Math.random()*0.4);
+      const sp=ST.spawn[(Math.random()*ST.spawn.length)|0];
+      cust.push(newCustomer(sp));
+      spawned++;
+    }
+  }
+  let offend=0;
+  nbHit[0]=0; nbHit[1]=0;
+  // serving timer
+  if(serving){
+    serving.t-=dt;
+    if(serving.t<=0){ serving.state='enter'; serving.t=0.45; served++; serving=null; }
+  }
+  for(let n=cust.length-1;n>=0;n--){
+    const c=cust[n];
+    if(c.state==='enter'){
+      c.t-=dt; c.fade=Math.max(0,c.t/0.45);
+      const dx=(ST.door.x+0.5)-c.x, dz=(ST.door.z+0.15)-c.z;
+      c.x+=dx*dt*3; c.z+=dz*dt*3;
+      if(c.t<=0){ c.state='inside'; c.fade=0; c.t=ST.shopTime*(0.65+Math.random()*0.7); }
+      continue;
+    }
+    if(c.state==='inside'){            // browsing the shelves, out of the way
+      c.t-=dt;
+      if(c.t<=0){
+        c.state='out'; c.bag=true; c.fade=0;
+        c.x=ST.exit.x+0.5; c.z=ST.exit.z+0.18; c.face=0; c.stuck=0;
+      }
+      continue;
+    }
+    if(c.state==='gone'){
+      c.t-=dt; c.fade=Math.max(0,c.t/0.5);
+      c.x+=Math.sin(c.face)*dt*1.6; c.z+=Math.cos(c.face)*dt*1.6;
+      if(c.t<=0) cust.splice(n,1);
+      continue;
+    }
+    if(c.state==='out'){               // heading home: down the OUT field, then off the street
+      c.fade=Math.min(1,c.fade+dt*4);
+      const ox0=Math.max(0,Math.min(W-1,Math.floor(c.x))), oz0=Math.max(0,Math.min(D-1,Math.floor(c.z)));
+      const here=cellType[ci(ox0,oz0)];
+      let tx,tz;
+      if(here==='walk'||here==='road'||here==='nb'||here==='keep'){
+        tx = (c.x<W/2) ? -2 : W+2; tz = walkZ+0.5;
+      } else {
+        let bd=distOut[ci(ox0,oz0)], bx=null, bz=null;
+        for(const [nx,nz] of [[ox0+1,oz0],[ox0-1,oz0],[ox0,oz0+1],[ox0,oz0-1]]){
+          if(!inB(nx,nz)||tAt(nx,nz)==='wall'||wallBetween(ox0,oz0,nx,nz)) continue;
+          if(distOut[ci(nx,nz)]<bd){ bd=distOut[ci(nx,nz)]; bx=nx; bz=nz; }
+        }
+        if(bx===null){ tx=c.x; tz=c.z; c.stuck+=dt; }
+        else { c.stuck=0; tx=bx+0.5; tz=bz+0.5; }
+      }
+      let vx=tx-c.x, vz=tz-c.z; const L=Math.hypot(vx,vz);
+      let moved=0;
+      if(L>0.02){
+        vx/=L; vz/=L; c.face=Math.atan2(vx,vz);
+        const px=c.x, pz=c.z, sl=Math.min(SPEED*0.9*dt, L);
+        moveAxis(c, vx*sl, 0); moveAxis(c, 0, vz*sl);
+        moved=Math.hypot(c.x-px, c.z-pz);
+      }
+      c.moving = moved>SPEED*dt*0.3;
+      // squeezing past people who are still waiting costs them patience
+      for(let j=0;j<cust.length;j++){
+        const o=cust[j]; if(o.state!=='walk') continue;
+        const d=Math.hypot(o.x-c.x,o.z-c.z);
+        if(d<0.8){ o.wait += 1.8*dt*(1-d/0.8); o.squeezed=0.5; }
+      }
+      if(!c.moving){
+        if(here==='walk') offend+=0.45;
+        else if(here==='road') offend+=1.3;
+        else if(here==='nb') offend+=1.8;
+        else if(here==='keep') offend+=4.0;
+        const fo=frontOwner[ci(ox0,oz0)];
+        if(fo!==255) nbHit[fo] += (here==='keep'?2.0 : here==='walk'?1.0 : 0.5);
+      }
+      if(c.x<0.75||c.x>W-0.75){ c.state='gone'; c.t=0.5; }
+      continue;
+    }
+    if(c.state==='leave'){
+      c.t-=dt; c.fade=Math.max(0,c.t/0.6);
+      c.z += dt*1.2;
+      if(c.t<=0) cust.splice(n,1);
+      continue;
+    }
+    c.wait+=dt;
+    if(c.squeezed>0) c.squeezed-=dt;
+    if(c.wait>ST.patience){ c.state='leave'; c.t=0.6; angry++; if(serving===c) serving=null; continue; }
+
+    // reached the door?
+    const dxd=(ST.door.x+0.5)-c.x, dzd=(ST.door.z+0.5)-c.z;
+    if(!serving && Math.hypot(dxd,dzd)<0.55){
+      serving=c; c.state='serve'; c.t=ST.serve; c.face=-Math.PI/2; continue;
+    }
+    if(c.state==='serve') continue;
+
+    // steer along the flow field
+    const cx=Math.max(0,Math.min(W-1,Math.floor(c.x))), cz=Math.max(0,Math.min(D-1,Math.floor(c.z)));
+    let tx=ST.door.x+0.5, tz=ST.door.z+0.5;
+    if(!(cx===ST.door.x&&cz===ST.door.z)){
+      let bd=dist[ci(cx,cz)], bx=null, bz=null;
+      const nb=[[cx+1,cz],[cx-1,cz],[cx,cz+1],[cx,cz-1]];
+      for(const [nx,nz] of nb){
+        if(!inB(nx,nz)) continue;
+        if(tAt(nx,nz)==='wall') continue;
+        if(wallBetween(cx,cz,nx,nz)) continue;
+        const d=dist[ci(nx,nz)];
+        if(d<bd){ bd=d; bx=nx; bz=nz; }
+      }
+      if(bx===null){ c.stuck+=dt; tx=c.x; tz=c.z; }
+      else { c.stuck=0; tx=bx+0.5; tz=bz+0.5; }
+    }
+    let vx=tx-c.x, vz=tz-c.z;
+    const len=Math.hypot(vx,vz);
+    let moved=0;
+    if(len>0.02){
+      vx/=len; vz/=len;
+      c.face=Math.atan2(vx,vz);
+      const stepLen=Math.min(SPEED*dt, len);
+      const nx=c.x+vx*stepLen, nz=c.z+vz*stepLen;
+      // blocked by someone ahead in line?
+      let blocked=false;
+      for(let j=0;j<cust.length;j++){
+        const o=cust[j];
+        if(o===c||o.i>=c.i) continue;
+        if(o.state!=='walk'&&o.state!=='serve') continue;
+        const dd=Math.hypot(nx-o.x, nz-o.z);
+        if(dd<BLOCK){ blocked=true; break; }
+      }
+      if(!blocked){
+        const ox=c.x, oz=c.z;
+        moveAxis(c, vx*stepLen, 0);
+        moveAxis(c, 0, vz*stepLen);
+        moved=Math.hypot(c.x-ox, c.z-oz);
+      }
+    }
+    c.moving = moved > SPEED*dt*0.35;
+
+    // nuisance: standing still off our own land
+    if(!c.moving){
+      const t=cellType[ci(cx,cz)];
+      if(t==='walk') offend += 0.45;
+      else if(t==='road') offend += 1.3;
+      else if(t==='nb') offend += 1.8;
+      else if(t==='keep') offend += 4.0;
+      // …and blocking a neighbour's shopfront is its own, much bigger problem
+      const fo=frontOwner[ci(cx,cz)];
+      if(fo!==255) nbHit[fo] += (t==='keep'?2.0 : t==='walk'?1.0 : 0.5);
+    }
+  }
+  // per-neighbour patience: a queue that spills sideways blocks their door
+  for(let k=0;k<2;k++){
+    if(nbHit[k]>0) nbAnger[k]=Math.min(100, nbAnger[k] + Math.min(nbHit[k],4)*2.2*dt);
+    else nbAnger[k]=Math.max(0, nbAnger[k] - 6.0*dt);
+  }
+  // drivers leaning on the horn count as a complaint too
+  for(const c of cars) if(c.honk>0.55) offend += 1.1;
+  // the neighbours calm down once the pavement clears
+  if(offend>0) nuisance += Math.min(offend,6)*dt;
+  else nuisance = Math.max(0, nuisance - 2.2*dt);
+  // gentle separation so bodies never overlap
+  for(let a=0;a<cust.length;a++){
+    const A=cust[a]; if(A.state!=='walk'&&A.state!=='out') continue;
+    for(let b=a+1;b<cust.length;b++){
+      const B=cust[b]; if(B.state!=='walk'&&B.state!=='out') continue;
+      let dx=B.x-A.x, dz=B.z-A.z; let d=Math.hypot(dx,dz);
+      if(d>0.0001 && d<SEP){
+        const push=(SEP-d)/2*0.6; dx/=d; dz/=d;
+        pushSafe(A,-dx*push,-dz*push); pushSafe(B,dx*push,dz*push);
+      }
+    }
+  }
+  if(nuisance>100) nuisance=100;
+
+  if(nuisance>=100){ endStage(false,'ごきんじょから通報が入って営業停止…😱'); return; }
+  for(let k=0;k<2;k++) if(nbAnger[k]>=100){
+    endStage(false,`${ST.nbName[k]}の店先をふさぎ続けて大激怒…お隣から通報された😠`); return;
+  }
+  if(spawned>=ST.total && cust.length===0){
+    const ok = angry<=ST.allowAngry;
+    endStage(ok, ok?'ぜんぶさばききった！ナイス仕切り👏':'待たせすぎて帰った人が多すぎたみたい…');
+  }
+}
+function moveAxis(c,dx,dz){
+  if(dx!==0){
+    const nx=c.x+dx;
+    const px=nx+Math.sign(dx)*RAD;
+    const ox=Math.floor(c.x), oz=Math.floor(c.z), tx=Math.floor(px);
+    if(tx!==ox){
+      if(!inB(tx,oz)||tAt(tx,oz)==='wall'||wallBetween(ox,oz,tx,oz)) return;
+    }
+    c.x=Math.max(0.3,Math.min(W-0.3,nx));
+  }
+  if(dz!==0){
+    const nz=c.z+dz;
+    const pz=nz+Math.sign(dz)*RAD;
+    const ox=Math.floor(c.x), oz=Math.floor(c.z), tz=Math.floor(pz);
+    if(tz!==oz){
+      if(!inB(ox,tz)||tAt(ox,tz)==='wall'||wallBetween(ox,oz,ox,tz)) return;
+    }
+    c.z=Math.max(0.3,Math.min(D-0.3,nz));
+  }
+}
+function pushSafe(c,dx,dz){ moveAxis(c,dx,0); moveAxis(c,0,dz); }
+
+/* ==================================================================
+   6. drawing people
+   ================================================================== */
+function drawPeople(){
+  mDyn.reset(); blobMesh.v.length=0;
+  for(const c of cust){
+    const s=c.fade, h=c.h;
+    if(s<=0.02) continue;
+    const yaw=c.face;
+    const bob = c.moving? Math.sin(clock*9+c.ph)*0.035 : 0;
+    const swing = c.moving? Math.sin(clock*9+c.ph)*0.14 : 0;
+    const y0 = (1-s)*1.2 + bob;
+    const sc = s;
+    // legs
+    box(mDyn, c.x+Math.cos(yaw)*0.13, y0+0.17*h, c.z-Math.sin(yaw)*0.13,
+        0.15,0.34*h*sc,0.15, C.post, yaw);
+    box(mDyn, c.x-Math.cos(yaw)*0.13, y0+0.17*h, c.z+Math.sin(yaw)*0.13,
+        0.15,0.34*h*sc,0.15, C.post, yaw);
+    // body
+    box(mDyn, c.x + Math.sin(yaw)*swing*0.25, y0+0.55*h, c.z + Math.cos(yaw)*swing*0.25,
+        0.44,0.42*h*sc,0.3, c.shirt, yaw);
+    // arms
+    box(mDyn, c.x+Math.cos(yaw)*0.27, y0+0.56*h, c.z-Math.sin(yaw)*0.27, 0.11,0.36*h*sc,0.11, c.shirt, yaw);
+    box(mDyn, c.x-Math.cos(yaw)*0.27, y0+0.56*h, c.z+Math.sin(yaw)*0.27, 0.11,0.36*h*sc,0.11, c.shirt, yaw);
+    // head + hair
+    box(mDyn, c.x, y0+0.9*h, c.z, 0.34,0.32*h*sc,0.32, c.skin, yaw);
+    box(mDyn, c.x, y0+1.04*h, c.z, 0.37,0.14*h*sc,0.35, c.hair, yaw);
+    box(mDyn, c.x+Math.sin(yaw)*0.17, y0+0.92*h, c.z+Math.cos(yaw)*0.17, 0.2,0.05,0.02, hex(0x2A2622), yaw);
+    // a bag of shopping on the way home
+    if(c.bag){
+      box(mDyn, c.x+Math.cos(yaw)*0.30, y0+0.40*h, c.z-Math.sin(yaw)*0.30,
+          0.22,0.26*sc,0.14, hex(0xE9E3D2), yaw);
+      box(mDyn, c.x+Math.cos(yaw)*0.30, y0+0.55*h, c.z-Math.sin(yaw)*0.30,
+          0.23,0.04,0.03, hex(0xC0B7A6), yaw);
+    }
+    // patience cube
+    if(c.state==='walk'){
+      const p=Math.min(1,c.wait/ST.patience);
+      const col = p<0.5? hex(0x62BE77) : p<0.78? hex(0xFFC145) : hex(0xE8455C);
+      const puff = p>0.78? 1+Math.sin(clock*10)*0.13 : 1;
+      box(mDyn, c.x, y0+1.34*h, c.z, 0.19*puff,0.19*puff,0.19*puff, col, clock*1.4);
+      if(c.squeezed>0){        // "…ちょっと前が通れないんだけど"
+        const q=0.1+Math.sin(clock*17)*0.02;
+        box(mDyn, c.x+0.24, y0+1.5*h, c.z, q,q,q, hex(0xE8455C), clock*2.2);
+      }
+    }
+    blob(c.x, c.z, 0.42, 0.55*s);
+  }
+  drawCars();
+  // hovered ghost barrier
+  if(phase===PHASE.SETUP && hover && !hover.on && usedBarriers<ST.budget)
+    barrierGeom(mDyn, hover.kind, hover.x, hover.z, true);
+  mDyn.upload();
+  gl.bindBuffer(gl.ARRAY_BUFFER, blobMesh.buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(blobMesh.v), gl.DYNAMIC_DRAW);
+  blobMesh.n = blobMesh.v.length/6;
+}
+
+/* ==================================================================
+   7. render loop
+   ================================================================== */
+const FOGC = hex(0xDDECEF);
+let last=performance.now();
+function frame(now){
+  let raw=(now-last)/1000; last=now;
+  raw=Math.min(raw,0.05);
+  if(phase===PHASE.RUN){
+    const n=speed; const dt=raw;
+    for(let k=0;k<n;k++){ if(phase!==PHASE.RUN) break; step(dt); }
+    syncHUD();
+  } else if(phase===PHASE.SETUP){ clock+=raw; }
+  else clock+=raw;
+  stepCars(raw * (phase===PHASE.RUN?speed:1));
+
+  resize(); updateCam();
+  gl.viewport(0,0,cv.width,cv.height);
+  gl.clearColor(0,0,0,0);   // let the CSS sky gradient show behind the diorama
+  gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK);
+  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+
+  gl.useProgram(PSolid);
+  gl.uniformMatrix4fv(uSolid.mvp,false,VP);
+  gl.uniform3fv(uSolid.light, norm([0.45,0.82,0.35]));
+  gl.uniform3fv(uSolid.cam, eye);
+  gl.uniform3fv(uSolid.fog, FOGC);
+  mStatic.draw();
+  if(phase===PHASE.SETUP) mGuide.draw();
+  mBar.draw();
+  drawPeople();
+  mDyn.draw();
+
+  // shadows
+  if(blobMesh.n){
+    gl.useProgram(PBlob);
+    gl.uniformMatrix4fv(uBlob.mvp,false,VP);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthMask(false);
+    gl.bindBuffer(gl.ARRAY_BUFFER,blobMesh.buf);
+    gl.enableVertexAttribArray(aBlob.pos); gl.vertexAttribPointer(aBlob.pos,3,gl.FLOAT,false,24,0);
+    gl.enableVertexAttribArray(aBlob.uv);  gl.vertexAttribPointer(aBlob.uv,2,gl.FLOAT,false,24,12);
+    gl.enableVertexAttribArray(aBlob.a);   gl.vertexAttribPointer(aBlob.a,1,gl.FLOAT,false,24,20);
+    gl.drawArrays(gl.TRIANGLES,0,blobMesh.n);
+    gl.depthMask(true); gl.disable(gl.BLEND);
+    gl.disableVertexAttribArray(aBlob.uv); gl.disableVertexAttribArray(aBlob.a);
+  }
+  placeTags();
+  requestAnimationFrame(frame);
+}
+
+/* ---------- floating labels ---------- */
+const labelBox=document.getElementById('labels');
+let tagEls=[], nbTagEls=[null,null];
+function makeTags(){
+  labelBox.innerHTML=''; tagEls=[]; nbTagEls=[null,null];
+  const add=(text,x,y,z,cls)=>{ const e=document.createElement('div');
+    e.className='tag'+(cls?' '+cls:''); e.textContent=text; labelBox.appendChild(e);
+    tagEls.push({e,x,y,z}); };
+  if(!ST) return;
+  add('うちの店', (ST.shop.x0+ST.shop.x1+1)/2, 4.4, (ST.shop.z0+ST.shop.z1+1)/2, 'own');
+  add('入口', ST.door.x+0.5, 2.55, ST.shop.z1+1.1);
+  add('出口', ST.exit.x+0.5, 2.55, ST.shop.z1+1.1);
+  add(ST.nbName[0], (ST.backL.x0+ST.backL.x1+1)/2, 3.2, (ST.backL.z0+ST.backL.z1+1)/2);
+  nbTagEls[0]=tagEls[tagEls.length-1].e;
+  add(ST.nbName[1], (ST.backR.x0+ST.backR.x1+1)/2, 3.2, (ST.backR.z0+ST.backR.z1+1)/2);
+  nbTagEls[1]=tagEls[tagEls.length-1].e;
+  add('歩道', W/2, 0.4, walkZ+0.5);
+  add('車道', W/2, 0.5, D-0.7, 'warn');
+  if(ST.keep.length) add('お隣の入口（通行止め厳禁）', ST.keep[0].x+0.5, 1.2, ST.keep[0].z+0.5, 'warn');
+  if(ST.keep.length>2) add('ここもダメ', ST.keep[2].x+0.5, 1.2, ST.keep[2].z+0.5, 'warn');
+}
+function placeTags(){
+  for(const t of tagEls){
+    const p=project(t.x,t.y,t.z);
+    if(!p||p.x<-80||p.x>cv.clientWidth+80){ t.e.style.display='none'; continue; }
+    t.e.style.display=''; t.e.style.left=p.x+'px'; t.e.style.top=p.y+'px';
+  }
+}
+
+/* ==================================================================
+   8. input
+   ================================================================== */
+let hover=null, paint=null, drag=null, mode='bar';
+
+function edgeAt(px,py){
+  const g=pickGround(px,py);
+  if(!g) return null;
+  if(g.x<-0.5||g.x>W+0.5||g.z<-0.5||g.z>D+0.5) return null;
+  const vx=Math.round(g.x), dv=Math.abs(g.x-vx), vz=Math.floor(g.z);
+  const hz=Math.round(g.z), dh=Math.abs(g.z-hz), hx=Math.floor(g.x);
+  let kind,x,z,d;
+  if(dv<=dh){ kind='v'; x=vx; z=vz; d=dv; } else { kind='h'; x=hx; z=hz; d=dh; }
+  if(d>0.42) return null;
+  if(!edgeOK(kind,x,z)) return null;
+  const on = kind==='v' ? !!vWall[vIdx(x,z)] : !!hWall[hIdx(x,z)];
+  return {kind,x,z,on};
+}
+function setEdge(e,on){
+  if(on && usedBarriers>=ST.budget){ toast('仕切りがもう残ってないよ！'); return false; }
+  const idx = e.kind==='v'?vIdx(e.x,e.z):hIdx(e.x,e.z);
+  const arr = e.kind==='v'?vWall:hWall;
+  if(!!arr[idx]===on) return false;
+  arr[idx]=on?1:0;
+  usedBarriers += on?1:-1;
+  buildBarriers(); recomputeField(); buildGuides(); syncUI();
+  return true;
+}
+
+cv.addEventListener('pointerdown',ev=>{
+  cv.setPointerCapture(ev.pointerId);
+  if(phase===PHASE.SETUP && mode==='bar' && ev.button!==2){
+    const e=edgeAt(ev.clientX,ev.clientY);
+    if(e){ paint={on:!e.on}; setEdge(e,!e.on); return; }
+  }
+  drag={x:ev.clientX,y:ev.clientY};
+});
+cv.addEventListener('pointermove',ev=>{
+  if(paint){
+    const e=edgeAt(ev.clientX,ev.clientY);
+    if(e && e.on!==paint.on) setEdge(e,paint.on);
+    return;
+  }
+  if(drag){
+    const dx=ev.clientX-drag.x, dy=ev.clientY-drag.y;
+    drag.x=ev.clientX; drag.y=ev.clientY;
+    cam.az -= dx*0.006;
+    cam.el = Math.max(0.28, Math.min(1.44, cam.el + dy*0.005));
+    return;
+  }
+  if(phase===PHASE.SETUP && mode==='bar') hover=edgeAt(ev.clientX,ev.clientY);
+});
+function endPtr(){ paint=null; drag=null; }
+cv.addEventListener('pointerup',endPtr);
+cv.addEventListener('pointercancel',endPtr);
+cv.addEventListener('pointerleave',()=>{hover=null;});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('wheel',ev=>{ ev.preventDefault();
+  cam.dist=Math.max(11,Math.min(38,cam.dist+Math.sign(ev.deltaY)*1.6)); },{passive:false});
+addEventListener('keydown',ev=>{
+  if(ev.key==='ArrowLeft') cam.az-=0.12;
+  else if(ev.key==='ArrowRight') cam.az+=0.12;
+  else if(ev.key==='ArrowUp') cam.dist=Math.max(11,cam.dist-1);
+  else if(ev.key==='ArrowDown') cam.dist=Math.min(38,cam.dist+1);
+});
+const hold=(el,fn)=>{ let t=null;
+  const go=()=>{fn(); t=setTimeout(function r(){fn(); t=setTimeout(r,60);},260);};
+  const stop=()=>{clearTimeout(t);t=null;};
+  el.addEventListener('pointerdown',e=>{e.preventDefault();go();});
+  ['pointerup','pointerleave','pointercancel'].forEach(k=>el.addEventListener(k,stop)); };
+hold(document.getElementById('camL'),()=>cam.az-=0.06);
+hold(document.getElementById('camR'),()=>cam.az+=0.06);
+hold(document.getElementById('camIn'),()=>cam.dist=Math.max(11,cam.dist-0.5));
+hold(document.getElementById('camOut'),()=>cam.dist=Math.min(38,cam.dist+0.5));
+
+/* ==================================================================
+   9. UI
+   ================================================================== */
+const $=id=>document.getElementById(id);
+const toastEl=$('toast'); let toastT=null;
+function toast(msg){ toastEl.textContent=msg; toastEl.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>toastEl.classList.remove('show'),1900); }
+
+let cleared = {};
+try{ cleared = JSON.parse(localStorage.getItem('gyoretsu-cleared')||'{}'); }catch(e){ cleared={}; }
+function saveCleared(){ try{ localStorage.setItem('gyoretsu-cleared',JSON.stringify(cleared)); }catch(e){} }
+
+/* ransom-note lettering for the punk screens */
+function ransom(text, el){
+  el.innerHTML='';
+  [...text].forEach((ch,i)=>{
+    const s=document.createElement('span');
+    if(ch==='\n'){ s.className='br'; el.appendChild(s); return; }
+    if(ch===' '||ch==='　'){ s.className='sp'; s.textContent=' '; el.appendChild(s); return; }
+    s.textContent=ch;
+    const rot=((i*47)%9)-4, dy=((i*29)%5)-2;
+    s.style.transform=`rotate(${rot}deg) translateY(${dy}px)`;
+    el.appendChild(s);
+  });
+}
+function allCleared(){
+  for(let i=0;i<NORMAL_STAGES;i++) if(!cleared[i]) return false;
+  return true;
+}
+
+function renderStageList(){
+  const box=$('stageList'); box.innerHTML='';
+  const unlocked=allCleared();
+  STAGES.forEach((s,i)=>{
+    const b=document.createElement('button');
+    b.className='stagebtn'+(s.popular?' pop':'');
+    const locked = !!s.popular && !unlocked;
+    const st=cleared[i]?'★'.repeat(cleared[i])+'☆'.repeat(3-cleared[i]):'';
+    const desc = locked
+      ? 'ステージ1〜6を全部クリアすると解禁'
+      : `${s.sub}　/　客${s.total}人・仕切り${s.budget}こ`;
+    b.innerHTML=`<span class="num">${s.popular?'∞':i+1}</span>
+      <span><span class="t">${s.name}${locked?' 🔒':(s.popular?' 🔥':'')}</span><span class="d">${desc}</span></span>
+      <span class="st">${st}</span>`;
+    if(locked){ b.disabled=true; b.classList.add('locked'); }
+    else b.addEventListener('click',()=>{ $('sSelect').hidden=true; startStage(i); });
+    box.appendChild(b);
+  });
+  const banner=$('tBanner');
+  if(banner){
+    banner.hidden = !unlocked;
+    banner.textContent = '★ ALL CLEAR ★ 大人気モード解禁中 — 開店前から10人だ、覚悟しろ';
+  }
+}
+
+function syncUI(){
+  const setup = phase===PHASE.SETUP;
+  $('deck').style.display = phase===PHASE.TITLE ? 'none' : 'flex';
+  $('hud').hidden = !(phase===PHASE.RUN);
+  $('spdSeg').hidden = !(phase===PHASE.RUN);
+  $('modeSeg').hidden = !setup;
+  $('budgetwrap').hidden = !setup;
+  $('bClear').hidden = !setup;
+  $('bOpen').hidden = !setup;
+  $('bAbort').hidden = !(phase===PHASE.RUN);
+  if(!ST) return;
+  $('stagename').textContent = ST.popular ? `🔥 ${ST.name}` : `${stageIdx+1}. ${ST.name}`;
+  const left = ST.budget-usedBarriers;
+  $('budget').textContent = left;
+  $('budget').classList.toggle('out', left===0);
+  if(setup){
+    $('hint').textContent = !reachIn()
+      ? '⚠ 入口までの道がふさがってる！どこか1か所あけよう'
+      : !reachOut()
+      ? '⚠ 出口から歩道に出られない！帰り道をあけよう'
+      : `${ST.hint} 緑矢印＝並ぶ道／青矢印＝帰り道・客${ST.total}人`;
+    $('bOpen').disabled = !reachable();
+  } else {
+    $('hint').textContent = phase===PHASE.RUN ? '営業中！客は仕切りに沿って並ぶよ' : '閉店しました';
+    $('bOpen').disabled = false;
+  }
+  makeTags();
+}
+function syncHUD(){
+  const q = cust.filter(c=>c.state==='walk'||c.state==='serve').length;
+  $('hServed').textContent=served;
+  $('hQueue').textContent=q;
+  $('hAngry').textContent=angry;
+  $('hOut').textContent=cust.filter(c=>c.state==='out'||c.state==='inside').length;
+  $('hLeft').textContent=ST.total-spawned;
+  const p=Math.round(nuisance);
+  $('gpct').textContent=p+'%';
+  $('gfill').style.width=p+'%';
+  for(let k=0;k<2;k++){
+    const v=Math.round(nbAnger[k]);
+    const el=$('nbB'+k); if(!el) continue;
+    el.style.width=v+'%';
+    const wrap=el.parentNode.parentNode;
+    wrap.classList.toggle('hot', v>=60);
+    wrap.classList.toggle('mid', v>=28&&v<60);
+    $('nbN'+k).textContent=(ST.nbName[k]||'').replace('お隣：','')+(v>=40?' 😠':'');
+    if(nbTagEls[k]) nbTagEls[k].classList.toggle('warn', v>=40);
+  }
+}
+
+$('mBar').addEventListener('click',()=>{mode='bar';$('mBar').setAttribute('aria-pressed','true');$('mCam').setAttribute('aria-pressed','false');});
+$('mCam').addEventListener('click',()=>{mode='cam';hover=null;$('mBar').setAttribute('aria-pressed','false');$('mCam').setAttribute('aria-pressed','true');});
+$('spdSeg').addEventListener('click',ev=>{
+  const b=ev.target.closest('button'); if(!b) return;
+  speed=+b.dataset.s;
+  [...$('spdSeg').children].forEach(x=>x.setAttribute('aria-pressed', x===b?'true':'false'));
+});
+$('bClear').addEventListener('click',()=>{
+  vWall.fill(0); hWall.fill(0); usedBarriers=0;
+  buildBarriers(); recomputeField(); buildGuides(); syncUI();
+});
+$('bOpen').addEventListener('click',()=>{
+  startMusic();
+  if(!reachable()){ toast('入口までの道がふさがってるよ！'); return; }
+  phase=PHASE.RUN; hover=null;
+  cust=[]; spawned=0; served=0; angry=0; nuisance=0; spawnT=0.4; serving=null; orderSeq=0;
+  nbAnger=[0,0]; nbHit=[0,0];
+  if(ST.preQueue){                    // 大人気モード：開店前からもう並んでる
+    const mid=(ST.yard.x0+ST.yard.x1+1)/2;
+    for(let i=0;i<ST.preQueue;i++){   // already lined up on OUR stretch of pavement
+      cust.push(newCustomer({ x: mid-1.5+(i%5)*0.75, z: walkZ+(i<5?0.3:0.72) }));
+      spawned++;
+    }
+    spawnT=1.6;
+    toast('開店前から10人!! 早くさばいて！');
+  }
+  syncUI(); syncHUD();
+});
+$('bAbort').addEventListener('click',()=>{
+  phase=PHASE.SETUP; cust=[]; serving=null; nuisance=0; nbAnger=[0,0]; syncUI();
+});
+
+function endStage(win,msg){
+  phase=PHASE.END;
+  const nui=Math.round(nuisance);
+  let stars=0;
+  if(win){ stars=1;
+    if(angry<=Math.max(1,ST.allowAngry-1) && nui<55) stars=2;
+    if(angry===0 && nui<18) stars=3; }
+  const score=Math.max(0, served*120 - angry*90 - nui*6)+(ST.popular?served*40:0);
+  const wasClear=allCleared();
+  if(win && stars>(cleared[stageIdx]||0)){ cleared[stageIdx]=stars; saveCleared(); }
+  const nowClear=allCleared();
+  const pop=!!ST.popular;
+
+  ransom(win ? (pop?'伝説の商店街':'完売御礼') : (nui>=100?'通報された':'総スカン'), $('rTitle'));
+  $('rKicker').innerHTML = win
+    ? 'SHUTTER DOWN // <em>WE RUN THIS STREET</em>'
+    : 'BUSTED // <em>NO FUTURE… YET</em>';
+  $('rSub').textContent = win
+    ? (pop?'ANARCHY IN THE SHOPPING STREET!!':'SOLD OUT!! NO REGRETS.')
+    : 'THE NEIGHBOURS CALLED THE COPS.';
+  $('rStars').textContent = '★'.repeat(stars)+'☆'.repeat(3-stars);
+  $('rMsg').textContent = msg + (win&&stars<3 ? '　★3は「離脱0人・迷惑18%未満」だよ。' : '');
+  $('rServed').textContent=served;
+  $('rAngry').textContent=angry;
+  $('rNui').textContent=nui+'%';
+  $('rScore').textContent=score;
+  const banner=$('rBanner');
+  if(nowClear && !wasClear){
+    banner.hidden=false;
+    banner.textContent='★ ALL CLEAR ★ 大人気モード解禁!! 開店前から10人ならんでるぞ';
+  } else if(pop && win){
+    banner.hidden=false;
+    banner.textContent='★ 大人気モード制覇 ★ この商店街はもうお前のもんだ';
+  } else banner.hidden=true;
+  const nxt=STAGES[stageIdx+1];
+  $('rNext').hidden = !(win && nxt && (!nxt.popular || nowClear));
+  $('sResult').hidden=false;
+  renderStageList();
+  syncUI();
+}
+$('rRetry').addEventListener('click',()=>{ $('sResult').hidden=true; startStage(stageIdx); });
+$('rNext').addEventListener('click',()=>{ $('sResult').hidden=true; startStage(Math.min(STAGES.length-1,stageIdx+1)); });
+$('rMenu').addEventListener('click',()=>{ $('sResult').hidden=true; renderStageList(); $('sSelect').hidden=false;
+  phase=PHASE.TITLE; syncUI(); });
+$('bStart').addEventListener('click',()=>{ startMusic(); renderStageList(); $('sTitle').hidden=true; $('sSelect').hidden=false; });
+$('bBackTitle').addEventListener('click',()=>{ $('sSelect').hidden=true; $('sTitle').hidden=false; });
+
+/* ==================================================================
+   10. boot
+   ================================================================== */
+function start(saved){
+  if(saved && saved.cleared) cleared = Object.assign({}, cleared, saved.cleared);
+  ransom('行列さばき\n商店街', $('tRansom'));
+  ransom('ステージセレクト', $('sRansom'));
+  renderStageList();
+  buildStage(STAGES[0]);      // show stage 1 behind the title card
+  buildBarriers();
+  phase=PHASE.TITLE;
+  syncUI();
+  $('sTitle').hidden=false; $('sSelect').hidden=true;
+  resize(); updateCam();
+  requestAnimationFrame(frame);
+  try{ window.claude?.hot?.snapshot?.(()=>({cleared})); }catch(e){}
+}
+addEventListener('resize',()=>{resize();});
+if(window.claude && window.claude.hot && window.claude.hot.ready) window.claude.hot.ready(start);
+else start((window.claude&&window.claude.hot&&window.claude.hot.data)||{});
+})();
+</script>
+
+</body>
+</html>
