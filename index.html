@@ -2,7 +2,8 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>行列さばき商店街</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <style>*{box-sizing:border-box}html,body{margin:0;padding:0}body{font:14px system-ui,sans-serif;background:#16202b}img{max-width:100%}[hidden]{display:none!important}</style>
     <meta property="og:title" content="行列さばき商店街">
     <meta property="og:description" content="スマホ・PCのブラウザで遊べる無料ゲームです。インストール不要！">
@@ -11,7 +12,6 @@
     <meta name="twitter:card" content="summary">
 </head>
 <body>
-<title>行列さばき商店街</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&family=Baloo+2:wght@700;800&family=Reggae+One&family=Bungee&family=Permanent+Marker&display=swap">
@@ -35,7 +35,9 @@
   --font-dis:"Baloo 2","M PLUS Rounded 1c",system-ui,sans-serif;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--ink);color:var(--cream);font-family:var(--font-jp);-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--ink);color:var(--cream);font-family:var(--font-jp);-webkit-font-smoothing:antialiased;
+  touch-action:manipulation;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;
+  -webkit-tap-highlight-color:transparent;overscroll-behavior:none}
 button{font-family:inherit;cursor:pointer;border:0}
 button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
 
@@ -364,11 +366,13 @@ button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--amber);out
 "use strict";
 
 /* ---------- shopping-street BGM ---------- */
-const bgm = new Audio('商店街の午後.m4a');
+const bgm = new Audio('bgm-shotengai.m4a');
 bgm.loop = true;
-bgm.preload = 'auto';
+bgm.preload = 'none';   // 3.2MBを起動時に先読みしない（モバイル回線対策。再生はタップ時に開始）
 bgm.volume = 0.32;
+bgm.setAttribute('playsinline','');   // iOS: 全画面プレイヤーへ奪われない
 let musicOn = true;
+try{ musicOn = localStorage.getItem('gyoretsu-bgm') !== 'off'; }catch(e){}
 const musicButton = document.getElementById('musicToggle');
 function syncMusicButton(){
   musicButton.setAttribute('aria-pressed', String(musicOn));
@@ -376,17 +380,23 @@ function syncMusicButton(){
 }
 function startMusic(){
   if(!musicOn) return;
-  const attempt = bgm.play();
+  const attempt = bgm.play();   // iOS unlock: 必ずタップ由来で呼ぶ
   if(attempt && typeof attempt.catch === 'function') attempt.catch(()=>{});
 }
 function toggleMusic(){
   musicOn = !musicOn;
   if(musicOn) startMusic();
   else bgm.pause();
+  try{ localStorage.setItem('gyoretsu-bgm', musicOn ? 'on' : 'off'); }catch(e){}
   syncMusicButton();
 }
 musicButton.addEventListener('click', toggleMusic);
 syncMusicButton();
+// iOS: ホームに戻る／着信で止まった曲を、復帰時に鳴らし直す
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden){ if(!bgm.paused) bgm.pause(); }
+  else if(musicOn && bgm.currentTime > 0) startMusic();
+});
 
 /* ==================================================================
    0. tiny 3D engine (raw WebGL, no libraries)
